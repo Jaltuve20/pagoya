@@ -11,7 +11,7 @@ Pago móvil + QR. PAGOYA no es una billetera virtual: es una modalidad para faci
 ## Estructura
 - `lib/main.dart`: app Flutter (WebView, botón atrás, barra de estado, compartir QR).
 - `assets/www/index.html`: pantallas y lógica de PAGOYA.
-- `assets/icon/`: ícono de la app.
+- `assets/icon/`: ícono de la app (`icon.png`, `icon_fg.png`) y logo para el splash (`logo.png`).
 - `.github/workflows/build-apk.yml`: genera `android/`, el ícono y compila.
 
 ## Notas

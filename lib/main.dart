@@ -127,18 +127,9 @@ class _WebShellState extends State<WebShell> {
                 child: Container(
                   color: _bg,
                   alignment: Alignment.center,
-                  child: Container(
-                    width: 96,
-                    height: 96,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFBBF24), Color(0xFF2563EB), Color(0xFFEF4444)],
-                      ),
-                    ),
-                    child: const Text('P\$',
-                        style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900)),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: Image.asset('assets/icon/logo.png', width: 112, height: 112),
                   ),
                 ),
               ),
