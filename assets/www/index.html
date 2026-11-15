@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PAGOYA - Prototipo Interactivo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<style>
+body{font-family:'Inter',sans-serif;background:radial-gradient(circle at 15% 10%,#1d4ed833,transparent 45%),radial-gradient(circle at 85% 90%,#facc1522,transparent 40%),#0f172a}
+.phone-frame{width:380px;height:min(780px,calc(100vh - 150px));min-height:640px;background:#fff;border-radius:40px;box-shadow:0 30px 60px -12px rgba(0,0,0,.6);overflow:hidden;position:relative;display:flex;flex-direction:column;border:8px solid #1e293b}
+.screen{display:none;flex:1;flex-direction:column;overflow-y:auto;background:#f8fafc}
+.screen.active{display:flex;animation:slideIn .38s cubic-bezier(.2,.8,.2,1)}
+.screen::-webkit-scrollbar{width:4px}.screen::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+@keyframes slideIn{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes up{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@keyframes pop{0%{transform:scale(0)}70%{transform:scale(1.18)}100%{transform:scale(1)}}
+@keyframes float{0%,100%{transform:translateY(0) rotate(3deg)}50%{transform:translateY(-8px) rotate(-2deg)}}
+@keyframes scan{0%,100%{top:8%}50%{top:90%}}
+@keyframes glow{0%,100%{box-shadow:0 0 0 0 #facc1566}50%{box-shadow:0 0 0 12px #facc1500}}
+@keyframes flash{0%{background:#facc1500}40%{background:#facc1566}100%{background:#facc1500}}
+.rise{opacity:0}.screen.active .rise{animation:up .5s both;animation-delay:calc(var(--i,0)*70ms + 60ms)}
+.pop-in{animation:pop .45s both}.shake{animation:shake .4s}.float{animation:float 4s ease-in-out infinite}.glow{animation:glow 2s infinite}
+.btn{width:100%;display:flex;align-items:center;justify-content:center;gap:.5rem;font-weight:700;font-size:.75rem;padding:.8rem 1rem;border-radius:1rem;transition:transform .15s,box-shadow .2s,background .2s;box-shadow:0 4px 12px -4px #0003}
+.btn:hover{transform:translateY(-1px)}.btn:active{transform:scale(.97)}
+.btn-dark{background:#0f172a;color:#fff}.btn-dark:hover{background:#1e293b}
+.btn-yellow{background:#facc15;color:#0f172a}.btn-yellow:hover{background:#fde047}
+.btn-green{background:#059669;color:#fff}.btn-green:hover{background:#047857}
+.btn-blue{background:#2563eb;color:#fff}.btn-blue:hover{background:#1d4ed8}
+.btn-light{background:#f1f5f9;color:#334155;box-shadow:none}.btn-light:hover{background:#e2e8f0}
+.back{padding:.5rem;border-radius:.75rem;background:#f1f5f9;color:#334155;transition:.15s}.back:hover{background:#e2e8f0}.back:active{transform:scale(.92)}
+.inp{width:100%;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:.75rem;padding:.6rem .75rem;font-size:.75rem;font-weight:600;color:#1e293b;outline:none;transition:.2s}
+.inp:focus{border-color:#facc15;box-shadow:0 0 0 3px #facc1533;background:#fff}.inp.err{border-color:#f43f5e;background:#fff1f2}
+.lbl{display:block;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.25rem}
+.em{color:#e11d48;font-size:10px;font-weight:600;min-height:13px;margin-top:2px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:1.25rem;box-shadow:0 2px 8px -2px #0001}
+.dot{width:16px;height:16px;border-radius:50%;border:2px solid #cbd5e1;background:#f1f5f9;transition:.2s}
+.dot.on{background:#0f172a;border-color:#0f172a;transform:scale(1.2)}.dot.bad{background:#f43f5e;border-color:#f43f5e}.dot.ok{background:#10b981;border-color:#10b981;transform:scale(1.2)}
+.key{background:#f1f5f9;color:#1e293b;font-weight:800;padding:.8rem 0;border-radius:1rem;font-size:1rem;transition:.12s}.key:hover{background:#e2e8f0}.key:active{transform:scale(.9);background:#facc15}
+.nav-btn{padding:.25rem .6rem;font-size:.72rem;background:#1e293b;color:#e2e8f0;border-radius:.4rem;font-weight:500;transition:.15s}.nav-btn:hover{background:#facc15;color:#0f172a}
+#toast{position:absolute;top:44px;left:50%;transform:translate(-50%,-20px);opacity:0;pointer-events:none;z-index:50;padding:.5rem .9rem;border-radius:999px;font-size:11px;font-weight:700;color:#fff;background:#0f172a;box-shadow:0 8px 20px #0005;transition:.3s;white-space:nowrap}
+#toast.show{opacity:1;transform:translate(-50%,0)}#toast.error{background:#e11d48}#toast.ok{background:#059669}
+.star{color:#cbd5e1;transition:transform .15s,color .15s}.star svg{fill:none;transition:.15s}.star:hover{transform:scale(1.15)}.star:active{transform:scale(.9)}
+.star.on{color:#facc15}.star.on svg{fill:#facc15}.star.pulse{animation:pop .35s}
+.otp-box{width:42px;height:52px;border:1.5px solid #e2e8f0;border-radius:.8rem;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;color:#0f172a;transition:.15s}
+.otp-box.on{border-color:#0f172a;background:#fff}.otp-box.cur{border-color:#facc15;box-shadow:0 0 0 3px #facc1544}
+#sheet{display:none}#sheet.open{display:block}#sheet .panel{animation:sheetUp .3s cubic-bezier(.2,.8,.2,1)}@keyframes sheetUp{from{transform:translateY(100%)}to{transform:none}}
+#sms-notif{position:absolute;top:44px;left:10px;right:10px;z-index:60;background:#fffffff2;backdrop-filter:blur(8px);border-radius:1.1rem;padding:.65rem .8rem;box-shadow:0 10px 30px #0006;transform:translateY(-150%);transition:transform .45s cubic-bezier(.2,.9,.3,1.2);cursor:pointer}
+#sms-notif.show{transform:none}
+.sw{width:46px;height:27px;border-radius:99px;background:#cbd5e1;position:relative;transition:.25s;flex-shrink:0}
+.sw::after{content:'';position:absolute;top:3px;left:3px;width:21px;height:21px;border-radius:50%;background:#fff;transition:.25s;box-shadow:0 2px 4px #0003}
+.sw.on{background:#10b981}.sw.on::after{transform:translateX(19px)}
+.seg{display:flex;gap:4px;background:#f1f5f9;border-radius:.9rem;padding:4px}
+.seg button{flex:1;padding:.5rem .25rem;font-size:11px;font-weight:700;border-radius:.7rem;color:#64748b;transition:.2s}
+.seg button.on{background:#0f172a;color:#fff;box-shadow:0 2px 6px #0003}
+#bio{display:none}#bio.open{display:flex}
+@keyframes ring{0%{box-shadow:0 0 0 0 #facc1599}100%{box-shadow:0 0 0 22px #facc1500}}
+.bio-ic{animation:ring 1.6s infinite}.bio-ic.ok{background:#10b981!important;color:#fff!important;animation:pop .4s}
+body.tema-anim *{transition:background-color .35s,color .35s,border-color .35s!important}
+/* ---- MODO OSCURO ---- */
+.dark .screen{background:#0b1220}
+.dark .bg-white{background-color:#111c2e}.dark .bg-slate-50{background-color:#0b1220}.dark .bg-slate-100{background-color:#1e293b}.dark .bg-slate-200{background-color:#334155}.dark .bg-slate-900{background-color:#1e293b}
+.dark .bg-gradient-to-b{background-image:linear-gradient(to bottom,#13203a,#0b1220)}
+.dark .text-slate-900{color:#f1f5f9}.dark .text-slate-800{color:#e2e8f0}.dark .text-slate-700{color:#cbd5e1}.dark .text-slate-600{color:#a8b5c7}.dark .text-slate-500{color:#94a3b8}.dark .text-slate-400{color:#7b8ba3}
+.dark .border-slate-100{border-color:#1e293b}.dark .border-slate-200{border-color:#2b3a52}
+.dark .bg-amber-100{background-color:#3b2a0a}.dark .text-amber-800,.dark .text-amber-700{color:#fcd34d}.dark .text-amber-600{color:#fbbf24}
+.dark .bg-emerald-50{background-color:#06281f}.dark .bg-emerald-100{background-color:#0a3a2c}.dark .text-emerald-800,.dark .text-emerald-700{color:#6ee7b7}.dark .border-emerald-100{border-color:#0f5132}
+.dark .bg-rose-50{background-color:#33121a}.dark .bg-rose-100{background-color:#4a1824}.dark .text-rose-700,.dark .text-rose-600{color:#fb7185}
+.dark .bg-yellow-50{background-color:#2a2208}.dark .border-yellow-200,.dark .border-yellow-300{border-color:#6b5710}.dark .text-yellow-900,.dark .text-yellow-800{color:#fde68a}
+.dark .bg-blue-100{background-color:#10264a}.dark .text-blue-700,.dark .text-blue-600{color:#93c5fd}
+.dark .\!bg-white{background-color:#0f1a2e!important}.dark .\!bg-amber-100{background-color:#3b2a0a!important}.dark .\!text-amber-800{color:#fcd34d!important}.dark .\!bg-rose-50{background-color:#33121a!important}.dark .\!text-rose-600{color:#fb7185!important}
+.dark [class*="hover:bg-amber-50"]:hover,.dark [class*="hover:bg-slate-50"]:hover,.dark [class*="hover:bg-rose-50"]:hover,.dark [class*="hover:bg-slate-200"]:hover{background-color:#1e293b!important}
+.dark .inp{background:#16233a;border-color:#2b3a52;color:#f1f5f9}.dark .inp:focus{background:#0f1a2e;border-color:#facc15}.dark .inp.err{background:#33121a;border-color:#f43f5e}.dark .inp::placeholder{color:#64748b}
+.dark .card{background:#111c2e;border-color:#2b3a52}
+.dark .back{background:#1e293b;color:#cbd5e1}.dark .back:hover{background:#2b3a52}
+.dark .btn-dark{background:#2b3a52}.dark .btn-dark:hover{background:#364a68}
+.dark .btn-light{background:#1e293b;color:#cbd5e1}.dark .btn-light:hover{background:#2b3a52}
+.dark .key{background:#1e293b;color:#f1f5f9}.dark .key:hover{background:#2b3a52}.dark .key:active{background:#facc15;color:#0f172a}
+.dark .dot{background:#1e293b;border-color:#475569}.dark .dot.on{background:#f1f5f9;border-color:#f1f5f9}.dark .dot.bad{background:#f43f5e;border-color:#f43f5e}.dark .dot.ok{background:#10b981;border-color:#10b981}
+.dark .otp-box{background:#16233a;border-color:#2b3a52;color:#f1f5f9}.dark .otp-box.on{background:#0f1a2e;border-color:#f1f5f9}.dark .otp-box.cur{border-color:#facc15}
+.dark #toast{background:#f1f5f9;color:#0f172a}.dark #toast.error{background:#e11d48;color:#fff}.dark #toast.ok{background:#059669;color:#fff}
+.dark #sms-notif{background:#1e293bf2}
+.dark .qr-box{background:#fff!important}
+.dark .star{color:#475569}.dark .star.on{color:#facc15}
+.dark .seg{background:#1e293b}.dark .seg button{color:#94a3b8}.dark .seg button.on{background:#facc15;color:#0f172a}
+.dark .sw{background:#475569}.dark .sw.on{background:#10b981}
+.corner{position:absolute;width:26px;height:26px;border:3px solid #facc15}
+</style>
+<style>
+/* Modo app: en un teléfono se oculta el marco del prototipo y se usa pantalla completa */
+@media (max-width:500px){
+ body{padding:0!important;display:block!important;min-height:100dvh}
+ header{display:none!important}
+ .phone-frame{width:100vw!important;height:100dvh!important;min-height:0!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+ main > div:has(#clock){display:none!important}
+ #toast,#sms-notif{top:max(16px,env(safe-area-inset-top))!important}
+}
+</style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+<header class="mb-3 text-center">
+  <h1 class="text-xl font-bold text-white flex items-center justify-center gap-2">
+    <span class="bg-yellow-400 text-slate-900 px-2 py-0.5 rounded-lg text-sm font-black">PAGOYA</span> Prototipo UI v2.9
+  </h1>
+  <div class="flex flex-wrap justify-center gap-1.5 mt-2 max-w-xl">
+    <button onclick="navTo(1)" class="nav-btn">1. Onboarding</button>
+    <button onclick="navTo(2)" class="nav-btn">2. Registro</button>
+    <button onclick="navTo(1.5)" class="nav-btn">3. Login PIN</button>
+    <button onclick="navTo(1.7)" class="nav-btn">3b. Login completo</button>
+    <button onclick="navTo(1.8)" class="nav-btn">3c. OTP SMS</button>
+    <button onclick="navTo(1.6)" class="nav-btn">4. Menú</button>
+    <button onclick="navTo(3)" class="nav-btn">5. Mi QR</button>
+    <button onclick="navTo(4)" class="nav-btn">6. Escanear</button>
+    <button onclick="navTo(5)" class="nav-btn">7. Confirmar</button>
+    <button onclick="navTo(6)" class="nav-btn">8. Copiado</button>
+    <button onclick="navTo(7)" class="nav-btn">9. Calificar</button>
+    <button onclick="navTo(8)" class="nav-btn">10. Ajustes</button>
+    <button onclick="resetDemo()" class="nav-btn" style="background:#7f1d1d">↺ Reiniciar</button>
+  </div>
+</header>
+
+<main class="phone-frame">
+  <div id="toast"></div>
+  <div id="sms-notif" onclick="usarCodigoSMS()">
+    <div class="flex items-start gap-2.5">
+      <div class="w-8 h-8 bg-emerald-500 text-white rounded-xl flex items-center justify-center shrink-0"><i data-lucide="message-circle" class="w-4 h-4"></i></div>
+      <div class="text-left"><p class="text-[10px] font-bold text-slate-500 flex justify-between"><span>MENSAJES</span><span>ahora</span></p>
+      <p class="text-xs text-slate-900 leading-snug">PAGOYA: tu código de verificación es <b id="sms-code" class="tracking-wider"></b>. Vence en 5 min. No lo compartas con nadie.</p>
+      <p class="text-[10px] text-blue-600 font-bold mt-0.5">Toca para autocompletar</p></div>
+    </div>
+  </div>
+  <div id="bio" class="absolute inset-0 z-[70] items-center justify-center bg-slate-900/60 p-6">
+    <div class="bg-white rounded-3xl p-6 w-full text-center shadow-2xl pop-in">
+      <div id="bio-icon" class="bio-ic w-20 h-20 rounded-full bg-amber-100 text-amber-700 mx-auto flex items-center justify-center mb-3"><i data-lucide="fingerprint" class="w-10 h-10"></i></div>
+      <h4 id="bio-titulo" class="font-black text-slate-900"></h4>
+      <p id="bio-estado" class="text-xs text-slate-500 mt-1">Coloca tu dedo en el sensor</p>
+      <p class="text-[10px] text-slate-400 mt-1">Simulado en el prototipo. En un teléfono con HTTPS se usará la huella o el rostro reales.</p>
+      <button onclick="bioTocar()" class="btn btn-dark mt-4">Tocar el sensor</button>
+      <button onclick="cerrarBio(false)" class="btn btn-light mt-2">Cancelar</button>
+    </div>
+  </div>
+  <div id="sheet" class="absolute inset-0 z-40">
+    <div class="absolute inset-0 bg-slate-900/50" onclick="cerrarSheet()"></div>
+    <div class="panel absolute bottom-0 inset-x-0 bg-white rounded-t-3xl p-5 space-y-2.5">
+      <div class="w-10 h-1 bg-slate-200 rounded-full mx-auto mb-1"></div>
+      <h4 class="font-black text-slate-900 text-center">Cerrar sesión</h4>
+      <button onclick="bloquearSesion()" class="w-full flex items-center gap-3 text-left card p-3 hover:bg-slate-50 active:scale-[.98] transition">
+        <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center"><i data-lucide="lock" class="w-5 h-5"></i></div>
+        <div><p class="font-bold text-xs text-slate-900">Bloquear la app</p><p class="text-[11px] text-slate-500">Seguirás en este teléfono: solo te pedirá tu PIN</p></div>
+      </button>
+      <button onclick="cerrarSesionCompleta()" class="w-full flex items-center gap-3 text-left card p-3 hover:bg-rose-50 active:scale-[.98] transition">
+        <div class="w-10 h-10 bg-rose-100 text-rose-700 rounded-xl flex items-center justify-center"><i data-lucide="log-out" class="w-5 h-5"></i></div>
+        <div><p class="font-bold text-xs text-slate-900">Cerrar sesión completa</p><p class="text-[11px] text-slate-500">Para volver a entrar necesitarás cédula, PIN y código SMS</p></div>
+      </button>
+      <button onclick="cerrarSheet()" class="btn btn-light">Cancelar</button>
+    </div>
+  </div>
+  <div class="bg-white px-6 py-2 flex justify-between items-center text-xs font-semibold text-slate-800 z-20 border-b border-slate-100">
+    <span id="clock">6:47</span>
+    <div class="w-20 h-3 bg-slate-900 rounded-full absolute left-1/2 -translate-x-1/2 top-1.5"></div>
+    <div class="flex items-center gap-1.5"><i data-lucide="signal" class="w-3.5 h-3.5"></i><i data-lucide="wifi" class="w-3.5 h-3.5"></i><i data-lucide="battery" class="w-3.5 h-3.5"></i></div>
+  </div>
+
+  <!-- 1 ONBOARDING -->
+  <div id="screen-1" class="screen active p-6 justify-between bg-gradient-to-b from-amber-50 via-white to-white">
+    <div class="rise flex justify-between items-center pt-2" style="--i:0">
+      <span class="text-[11px] bg-emerald-100 text-emerald-800 font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Tasa BCV: Bs. <span class="t-tasa">--</span>/$</span>
+      <span class="text-xs bg-amber-100 text-amber-800 font-semibold px-2 py-0.5 rounded-full">v2.9</span>
+    </div>
+    <div class="text-center my-auto">
+      <div class="rise float w-24 h-24 bg-gradient-to-tr from-amber-400 via-blue-600 to-red-500 rounded-3xl mx-auto flex items-center justify-center shadow-xl mb-6" style="--i:1"><span class="text-white font-black text-3xl tracking-tighter">P$</span></div>
+      <h2 class="rise text-3xl font-black text-slate-900 tracking-tight" style="--i:2">PAGOYA</h2>
+      <p class="rise text-sm font-bold text-blue-600 mt-1 uppercase tracking-wider" style="--i:3">Pago móvil + QR</p>
+      <p class="rise text-slate-600 text-sm mt-4 px-4 leading-relaxed" style="--i:4">Paga y cobra sin escribir datos bancarios manuales. Rápido, seguro y sin enredos.</p>
+    </div>
+    <div class="rise space-y-3 pb-4" style="--i:5">
+      <button onclick="iniciarSesion()" class="btn btn-dark text-sm py-3.5"><i data-lucide="log-in" class="w-5 h-5 text-yellow-400"></i> Iniciar Sesión</button>
+      <button onclick="goToScreen(2)" class="btn btn-yellow"><i data-lucide="user-plus" class="w-4 h-4"></i> Registrarme por primera vez</button>
+    </div>
+  </div>
+
+  <!-- 1.5 LOGIN -->
+  <div id="screen-1.5" class="screen p-6 justify-between bg-white">
+    <div>
+      <div class="rise flex items-center justify-between mb-4" style="--i:0">
+        <button onclick="goToScreen(1)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-slate-900">Iniciar Sesión</h3><div class="w-9"></div>
+      </div>
+      <div class="text-center mb-4">
+        <div class="rise w-14 h-14 bg-amber-100 text-amber-800 rounded-2xl mx-auto flex items-center justify-center mb-3 glow" style="--i:1"><i data-lucide="lock" class="w-7 h-7"></i></div>
+        <h4 id="login-saludo" class="rise font-black text-slate-900 text-lg" style="--i:2">Introduce tu PIN</h4>
+        <p id="login-msg" class="rise text-xs text-slate-500 mt-1 min-h-[16px]" style="--i:3">Teclado seguro con posiciones aleatorias</p>
+        <div id="pin-dots" class="rise flex justify-center gap-3 my-4" style="--i:3">
+          <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+        </div>
+      </div>
+      <div id="random-keypad" class="rise grid grid-cols-3 gap-3 max-w-[260px] mx-auto" style="--i:4"></div>
+      <button id="btn-bio" onclick="entrarConHuella()" style="display:none" class="mx-auto mt-4 items-center gap-2 text-xs font-bold text-slate-700 bg-slate-100 rounded-2xl px-4 py-2.5 hover:bg-slate-200 active:scale-95 transition"><i data-lucide="fingerprint" class="w-5 h-5 text-amber-600"></i> Entrar con huella</button>
+    </div>
+    <div class="text-center pb-2 space-y-1">
+      <p class="text-[10px] text-slate-400">Prototipo: la cuenta demo usa el PIN <b>1234</b></p>
+      <button onclick="cambiarCuenta()" class="block mx-auto text-xs text-slate-600 font-bold hover:underline">¿No eres tú? Entrar con otra cuenta</button>
+      <button onclick="goToScreen(2)" class="text-xs text-blue-600 font-bold hover:underline">¿No tienes cuenta? Regístrate aquí</button>
+    </div>
+  </div>
+
+  <!-- 1.7 LOGIN COMPLETO (cédula + PIN) -->
+  <div id="screen-1.7" class="screen p-6 justify-between bg-white">
+    <div>
+      <div class="rise flex items-center justify-between mb-4" style="--i:0">
+        <button onclick="goToScreen(1)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-slate-900">Iniciar Sesión</h3><div class="w-9"></div>
+      </div>
+      <div class="text-center mb-5">
+        <div class="rise w-14 h-14 bg-blue-100 text-blue-700 rounded-2xl mx-auto flex items-center justify-center mb-3 glow" style="--i:1"><i data-lucide="shield-check" class="w-7 h-7"></i></div>
+        <h4 class="rise font-black text-slate-900 text-lg" style="--i:2">Accede a tu cuenta</h4>
+        <p class="rise text-xs text-slate-500 mt-1 px-2" style="--i:2">Ingresa tu cédula y PIN. Luego te enviaremos un código por SMS para verificar que eres tú.</p>
+      </div>
+      <div class="space-y-3">
+        <div class="rise" style="--i:3"><label class="lbl">Cédula o RIF</label>
+          <div class="flex gap-2"><select id="lc-nac" class="inp !w-auto"><option>V</option><option>J</option><option>E</option><option>G</option></select>
+          <input id="lc-ced" class="inp" inputmode="numeric" maxlength="9" placeholder="12345678"></div></div>
+        <div class="rise" style="--i:4"><label class="lbl">PIN (4 dígitos)</label>
+          <input id="lc-pin" type="password" class="inp tracking-[.5em] text-center" inputmode="numeric" maxlength="4" placeholder="••••" onkeydown="if(event.key==='Enter')loginCompleto()"></div>
+        <p class="em text-center" id="e-lc"></p>
+      </div>
+    </div>
+    <div class="rise space-y-2 pt-3" style="--i:5">
+      <button id="btn-lc" onclick="loginCompleto()" class="btn btn-dark disabled:opacity-50"><i data-lucide="message-square" class="w-4 h-4 text-yellow-400"></i> Continuar y recibir código SMS</button>
+      <p class="text-[10px] text-slate-400 text-center">Prototipo: cuenta demo V-12345678 • PIN 1234</p>
+      <div class="text-center"><button onclick="goToScreen(2)" class="text-xs text-blue-600 font-bold hover:underline">¿No tienes cuenta? Regístrate aquí</button></div>
+    </div>
+  </div>
+
+  <!-- 1.8 VERIFICACIÓN OTP POR SMS -->
+  <div id="screen-1.8" class="screen p-6 justify-between bg-white">
+    <div>
+      <div class="rise flex items-center justify-between mb-4" style="--i:0">
+        <button onclick="goToScreen(1.7)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+        <h3 class="font-bold text-slate-900">Verificación</h3><div class="w-9"></div>
+      </div>
+      <div class="text-center">
+        <div class="rise w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl mx-auto flex items-center justify-center mb-3 glow" style="--i:1"><i data-lucide="message-square" class="w-7 h-7"></i></div>
+        <h4 class="rise font-black text-slate-900 text-lg" style="--i:2">Revisa tus mensajes</h4>
+        <p class="rise text-xs text-slate-500 mt-1 px-2" style="--i:2">Enviamos un código de 6 dígitos por SMS al <b id="otp-tel" class="text-slate-800"></b></p>
+        <div class="rise relative my-5" style="--i:3" onclick="$('otp-input').focus()">
+          <div id="otp-boxes" class="flex justify-center gap-2"><div class="otp-box"></div><div class="otp-box"></div><div class="otp-box"></div><div class="otp-box"></div><div class="otp-box"></div><div class="otp-box"></div></div>
+          <input id="otp-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" class="absolute inset-0 w-full h-full opacity-0" oninput="otpInput()">
+        </div>
+        <p class="em" id="e-otp"></p>
+        <p id="otp-exp" class="rise text-[11px] font-semibold text-slate-500 mt-1" style="--i:4"></p>
+      </div>
+    </div>
+    <div class="rise space-y-2 pt-3" style="--i:5">
+      <button onclick="verificarOTP()" class="btn btn-dark"><i data-lucide="shield-check" class="w-4 h-4 text-yellow-400"></i> Verificar e ingresar</button>
+      <button id="btn-reenviar" onclick="enviarOTP(true)" class="btn btn-light disabled:opacity-50" disabled>Reenviar código</button>
+      <p class="text-[10px] text-slate-400 text-center">Prototipo: el SMS aparece como notificación en la parte de arriba</p>
+    </div>
+  </div>
+
+  <!-- 8 AJUSTES -->
+  <div id="screen-8" class="screen p-5 bg-slate-50">
+    <div class="rise flex items-center justify-between mb-3" style="--i:0">
+      <button onclick="goToScreen(1.6)" class="back bg-white shadow-sm"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-slate-900 text-sm">Ajustes</h3><div class="w-9"></div>
+    </div>
+    <div class="space-y-3">
+      <div class="rise card p-3.5" style="--i:1">
+        <p class="lbl flex items-center gap-1.5"><i data-lucide="palette" class="w-3.5 h-3.5"></i> Apariencia</p>
+        <div class="seg mt-1.5">
+          <button id="th-claro" onclick="setTema('claro')">☀️ Claro</button>
+          <button id="th-oscuro" onclick="setTema('oscuro')">🌙 Oscuro</button>
+          <button id="th-auto" onclick="setTema('auto')">📱 Automático</button>
+        </div>
+      </div>
+      <div class="rise card p-3.5" style="--i:2">
+        <p class="lbl flex items-center gap-1.5"><i data-lucide="shield-check" class="w-3.5 h-3.5"></i> Seguridad</p>
+        <div class="flex items-center justify-between gap-3 mt-1">
+          <div class="flex items-center gap-2.5">
+            <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center shrink-0"><i data-lucide="fingerprint" class="w-5 h-5"></i></div>
+            <div><p class="text-xs font-bold text-slate-900">Entrar con huella</p><p id="bio-modo-txt" class="text-[10px] text-slate-500"></p></div>
+          </div>
+          <button id="sw-bio" onclick="toggleBio()" class="sw" aria-label="Activar huella"></button>
+        </div>
+      </div>
+      <div class="rise card p-3.5" style="--i:3">
+        <p class="lbl flex items-center gap-1.5"><i data-lucide="banknote" class="w-3.5 h-3.5"></i> Tasa BCV</p>
+        <div class="flex items-end justify-between mt-1">
+          <h3 class="text-2xl font-black text-slate-900">Bs. <span class="t-tasa">--</span> <span class="text-xs font-semibold text-slate-400">/ USD</span></h3>
+          <button onclick="cargarTasa(true)" class="text-[11px] font-bold bg-slate-100 text-slate-700 rounded-lg px-2.5 py-1.5 flex items-center gap-1 hover:bg-slate-200 active:scale-95 transition"><span class="tasa-ic inline-flex"><i data-lucide="refresh-cw" class="w-3 h-3"></i></span> Actualizar</button>
+        </div>
+        <p id="aj-tasa-estado" class="text-[11px] text-slate-500 mt-1.5"></p>
+        <p class="text-[10px] text-slate-400 mt-0.5">Se actualiza sola al abrir la app y cada 30 minutos.</p>
+      </div>
+      <div class="rise card p-3.5 text-xs" style="--i:4">
+        <p class="lbl flex items-center gap-1.5"><i data-lucide="user" class="w-3.5 h-3.5"></i> Mi cuenta</p>
+        <div class="space-y-1 mt-1"><div class="flex justify-between"><span class="text-slate-500">Nombre</span><b id="aj-nombre" class="text-slate-800"></b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Cédula</span><b id="aj-ced" class="text-slate-800"></b></div>
+        <div class="flex justify-between"><span class="text-slate-500">Banco</span><b id="aj-banco" class="text-slate-800"></b></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 1.6 MENÚ -->
+  <div id="screen-1.6" class="screen p-5 justify-between bg-slate-50">
+    <div>
+      <div class="rise flex items-center justify-between mb-4" style="--i:0">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-slate-900 text-yellow-400 rounded-2xl flex items-center justify-center font-black">P$</div>
+          <div><h4 id="menu-nombre-user" class="font-bold text-slate-900 text-sm">Hola</h4><p id="menu-sesion" class="text-[10px] text-emerald-600 font-semibold">● Sesión Activa</p></div>
+        </div>
+        <div class="flex gap-2"><button onclick="goToScreen(8)" class="back bg-white shadow-sm" title="Ajustes"><i data-lucide="settings" class="w-4 h-4"></i></button><button onclick="abrirSheet()" class="back bg-white shadow-sm" title="Cerrar sesión"><i data-lucide="log-out" class="w-4 h-4"></i></button></div>
+      </div>
+      <div class="rise bg-gradient-to-r from-slate-900 to-slate-700 text-white rounded-3xl p-4 shadow-xl mb-4" style="--i:1">
+        <div class="flex justify-between"><p class="text-[11px] text-slate-300 font-medium">Dólar del día</p><button onclick="cargarTasa(true)" class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-bold flex items-center gap-1 active:scale-95 transition" title="Actualizar tasa"><span class="tasa-ic inline-flex"><i data-lucide="refresh-cw" class="w-3 h-3"></i></span><span class="tasa-txt">Actualizada</span></button></div>
+        <div class="flex gap-3 mt-1.5">
+          <div class="flex-1 rounded-2xl bg-white/10 px-3 py-2"><p class="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">$ BCV</p><h3 class="text-lg font-black text-yellow-400 leading-tight">Bs. <span class="t-tasa">--</span></h3></div>
+          <div class="flex-1 rounded-2xl bg-white/10 px-3 py-2"><p class="text-[10px] font-bold text-sky-300 uppercase tracking-wider">$ Paralelo</p><h3 class="text-lg font-black text-white leading-tight">Bs. <span class="t-par">--</span></h3></div>
+        </div>
+      </div>
+      <div class="rise grid grid-cols-2 gap-3 mb-4" style="--i:2">
+        <button onclick="goToScreen(3)" class="card p-3.5 text-left hover:bg-amber-50 hover:-translate-y-0.5 active:scale-95 transition">
+          <div class="w-10 h-10 bg-amber-100 text-amber-800 rounded-xl flex items-center justify-center mb-2"><i data-lucide="qr-code" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-slate-900 text-xs">Mostrar mi QR</h4><p class="text-[10px] text-slate-500 mt-0.5">Para que te paguen</p>
+        </button>
+        <button onclick="goToScreen(4)" class="bg-slate-900 text-white p-3.5 rounded-[1.25rem] shadow-md text-left hover:bg-slate-800 hover:-translate-y-0.5 active:scale-95 transition">
+          <div class="w-10 h-10 bg-yellow-400 text-slate-900 rounded-xl flex items-center justify-center mb-2"><i data-lucide="scan" class="w-5 h-5"></i></div>
+          <h4 class="font-bold text-xs">Escanear Pago</h4><p class="text-[10px] text-slate-300 mt-0.5">Copia datos y abre tu banco</p>
+        </button>
+      </div>
+      <div class="rise card p-3" style="--i:3">
+        <div class="flex justify-between items-center mb-2 pb-2 border-b border-slate-100">
+          <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5"><i data-lucide="history" class="w-3.5 h-3.5 text-blue-600"></i> Movimientos</span>
+          <button onclick="simularCobro()" class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-lg hover:bg-emerald-200 active:scale-95 transition">+ Simular cobro</button>
+        </div>
+        <div id="historial-lista" class="space-y-2 max-h-44 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+    <div class="text-center pt-2"><span class="text-[10px] text-slate-400">PAGOYA • Pago Móvil Inteligente con QR</span></div>
+  </div>
+
+  <!-- 2 REGISTRO -->
+  <div id="screen-2" class="screen p-5 bg-white">
+    <div class="rise flex items-center justify-between mb-3" style="--i:0">
+      <button onclick="goToScreen(1)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-slate-900 text-sm">Crear mi cuenta</h3><div class="w-9"></div>
+    </div>
+    <div class="space-y-2.5">
+      <div class="rise" style="--i:1"><label class="lbl">Nombre completo</label><input id="reg-nombre" class="inp" placeholder="Ej. José Altuve" autocomplete="off"><p class="em" id="e-nombre"></p></div>
+      <div class="rise" style="--i:2"><label class="lbl">Cédula o RIF</label>
+        <div class="flex gap-2"><select id="reg-nac" class="inp !w-auto"><option>V</option><option>J</option><option>E</option><option>G</option></select>
+        <input id="reg-cedula" class="inp" inputmode="numeric" maxlength="9" placeholder="12345678"></div><p class="em" id="e-cedula"></p></div>
+      <div class="rise" style="--i:3"><label class="lbl">Teléfono afiliado a Pago Móvil</label>
+        <div class="flex gap-2"><select id="reg-op" class="inp !w-auto"><option>0414</option><option>0424</option><option>0412</option><option>0416</option><option>0426</option></select>
+        <input id="reg-tel" class="inp" inputmode="numeric" maxlength="7" placeholder="1234567"></div><p class="em" id="e-tel"></p></div>
+      <div class="rise" style="--i:4"><label class="lbl">Tu banco</label>
+        <select id="reg-banco" class="inp"><option value="0191">0191 - BNC</option><option value="0102">0102 - Banco de Venezuela (BDV)</option><option value="0134">0134 - Banesco</option><option value="0105">0105 - Mercantil</option><option value="0108">0108 - Provincial</option></select></div>
+      <div class="rise grid grid-cols-2 gap-2" style="--i:5">
+        <div><label class="lbl">Crea tu PIN (4 dígitos)</label><input id="reg-pin" type="password" class="inp tracking-[.5em] text-center" inputmode="numeric" maxlength="4" placeholder="••••"><p class="em" id="e-pin"></p></div>
+        <div><label class="lbl">Confirma tu PIN</label><input id="reg-pin2" type="password" class="inp tracking-[.5em] text-center" inputmode="numeric" maxlength="4" placeholder="••••"><p class="em" id="e-pin2"></p></div>
+      </div>
+    </div>
+    <div class="rise pt-3 mt-auto" style="--i:6"><button onclick="registrar()" class="btn btn-dark"><i data-lucide="check-circle" class="w-4 h-4 text-yellow-400"></i> Crear cuenta y generar mi QR</button></div>
+  </div>
+
+  <!-- 3 MI QR -->
+  <div id="screen-3" class="screen p-5 justify-between bg-white">
+    <div class="rise flex items-center justify-between" style="--i:0">
+      <button onclick="goToScreen(1.6)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-slate-900 text-sm">Tu QR PAGOYA</h3>
+      <button onclick="goToScreen(4)" class="back !bg-amber-100 !text-amber-800" title="Escanear"><i data-lucide="scan" class="w-5 h-5"></i></button>
+    </div>
+    <div class="rise bg-gradient-to-b from-slate-50 to-white border border-slate-100 shadow-lg rounded-3xl p-4 text-center my-auto relative" style="--i:1">
+      <div class="absolute -top-3 left-1/2 -translate-x-1/2 bg-yellow-400 text-slate-900 font-black text-[9px] px-3 py-1 rounded-full uppercase tracking-widest shadow-sm glow">Listo para cobrar</div>
+      <h4 id="qr-nombre" class="font-black text-base text-slate-900 mt-2"></h4>
+      <p id="qr-info" class="text-[11px] font-semibold text-blue-600 mt-0.5"></p>
+      <div class="qr-box bg-white p-3 rounded-2xl shadow-inner inline-block my-3 border border-slate-100"><canvas id="qr-canvas" width="176" height="176" style="width:176px;height:176px"></canvas></div>
+      <p id="qr-error" class="text-[11px] text-rose-600 font-semibold hidden">No se pudo generar el QR. Revisa tu conexión (se necesita la librería de QR) y recarga.</p>
+      <p class="text-[10px] text-slate-400">Quien lo escanee verá tus datos de Pago Móvil, sin escribir nada.</p>
+    </div>
+    <div class="rise grid grid-cols-2 gap-2" style="--i:2">
+      <button onclick="descargarQR()" class="btn btn-light"><i data-lucide="download" class="w-4 h-4 text-blue-600"></i> Descargar</button>
+      <button onclick="goToScreen(1.6)" class="btn btn-dark"><i data-lucide="home" class="w-4 h-4 text-yellow-400"></i> Menú</button>
+    </div>
+  </div>
+
+  <!-- 4 ESCANEAR -->
+  <div id="screen-4" class="screen !bg-slate-950 p-6 justify-between relative text-white">
+    <div class="flex items-center justify-between z-10">
+      <button onclick="goToScreen(1.6)" class="back !bg-slate-800 !text-white"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-sm">Escanea el QR PAGOYA</h3>
+      <button onclick="toast('Linterna activada')" class="back !bg-slate-800 !text-amber-400"><i data-lucide="flashlight" class="w-5 h-5"></i></button>
+    </div>
+    <div id="visor" class="relative w-60 h-60 mx-auto my-auto rounded-3xl overflow-hidden bg-slate-900/50">
+      <div class="absolute inset-0 bg-[radial-gradient(#eab308_1px,transparent_1px)] [background-size:16px_16px] opacity-20"></div>
+      <div class="corner top-2 left-2 rounded-tl-2xl border-r-0 border-b-0"></div><div class="corner top-2 right-2 rounded-tr-2xl border-l-0 border-b-0"></div>
+      <div class="corner bottom-2 left-2 rounded-bl-2xl border-r-0 border-t-0"></div><div class="corner bottom-2 right-2 rounded-br-2xl border-l-0 border-t-0"></div>
+      <div class="absolute left-3 right-3 h-0.5 bg-yellow-400 rounded shadow-[0_0_15px_#eab308]" style="animation:scan 2.4s ease-in-out infinite"></div>
+      <div id="visor-txt" class="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
+        <i data-lucide="scan-line" class="w-12 h-12 text-yellow-400 mb-2 opacity-80"></i>
+        <p class="text-xs text-slate-300 font-medium">Apunta al código QR del comercio o persona</p>
+      </div>
+    </div>
+    <div class="z-10 space-y-2">
+      <input id="file-qr" type="file" accept="image/*" class="hidden" onchange="subirDesdeGaleria(event)">
+      <button id="btn-galeria" onclick="$('file-qr').click()" class="btn !bg-slate-800 !text-white hover:!bg-slate-700 disabled:opacity-50"><i data-lucide="image-up" class="w-4 h-4 text-yellow-400"></i> Subir QR desde la galería</button>
+      <button id="btn-sim-scan" onclick="simularEscaneo()" class="btn btn-yellow disabled:opacity-50"><i data-lucide="zap" class="w-4 h-4"></i> Simular lectura QR exitosa</button>
+    </div>
+  </div>
+
+  <!-- 5 CONFIRMAR -->
+  <div id="screen-5" class="screen p-5 bg-slate-50">
+    <div class="rise flex items-center justify-between mb-3" style="--i:0">
+      <button onclick="goToScreen(4)" class="back bg-white shadow-sm"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-slate-900 text-sm">Confirmar Pago</h3><div class="w-9"></div>
+    </div>
+    <div class="rise card p-4 mb-3" style="--i:1">
+      <div class="flex items-center gap-3 mb-3 pb-3 border-b border-slate-100">
+        <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-800"><i data-lucide="store" class="w-5 h-5"></i></div>
+        <div><h4 id="conf-nombre" class="font-bold text-slate-900 text-sm"></h4><p class="text-[11px] text-emerald-600 font-semibold flex items-center gap-1"><i data-lucide="badge-check" class="w-3 h-3"></i> Destinatario verificado</p></div>
+      </div>
+      <div class="space-y-1.5 text-xs">
+        <div class="flex justify-between"><span class="text-slate-500">Banco destino</span><span id="conf-banco" class="font-bold text-slate-800"></span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Cédula / RIF</span><span id="conf-cedula" class="font-bold text-slate-800"></span></div>
+        <div class="flex justify-between"><span class="text-slate-500">Teléfono</span><span id="conf-telefono" class="font-bold text-slate-800"></span></div>
+      </div>
+    </div>
+    <div class="rise card p-3 mb-3" style="--i:2">
+      <label class="lbl">¿Desde cuál banco vas a pagar?</label>
+      <select id="tu-banco" class="inp"><option value="BDV">Banco de Venezuela (BDV)</option><option value="Banesco">Banesco</option><option value="Mercantil">Mercantil</option><option value="BNC">BNC</option><option value="Provincial">BBVA Provincial</option></select>
+    </div>
+    <div class="rise bg-yellow-50 border border-yellow-200 rounded-2xl p-3" style="--i:3">
+      <label class="lbl !text-yellow-900">Monto en Bolívares (Bs.)</label>
+      <div class="flex items-center gap-2"><span class="text-base font-black text-yellow-800">Bs.</span>
+        <input id="monto" class="inp !text-base !font-black !bg-white !border-yellow-300" inputmode="decimal" value="500,00" oninput="actualizarUSD()" onblur="formatearMonto()"></div>
+      <div class="flex gap-1.5 mt-2">
+        <button onclick="setMonto(100)" class="flex-1 text-[11px] font-bold bg-white border border-yellow-300 text-yellow-900 rounded-lg py-1 hover:bg-yellow-100 active:scale-95 transition">100</button>
+        <button onclick="setMonto(500)" class="flex-1 text-[11px] font-bold bg-white border border-yellow-300 text-yellow-900 rounded-lg py-1 hover:bg-yellow-100 active:scale-95 transition">500</button>
+        <button onclick="setMonto(1000)" class="flex-1 text-[11px] font-bold bg-white border border-yellow-300 text-yellow-900 rounded-lg py-1 hover:bg-yellow-100 active:scale-95 transition">1.000</button>
+      </div>
+      <div class="flex justify-between mt-1.5"><p id="usd" class="text-[11px] font-bold text-yellow-900"></p><p class="text-[10px] text-yellow-800">Tasa BCV: Bs. <span class="t-tasa">--</span> / $</p></div>
+      <p class="em" id="e-monto"></p>
+    </div>
+    <div class="rise pt-3 mt-auto" style="--i:4"><button onclick="copiarYPrepararPago()" class="btn btn-green"><i data-lucide="copy" class="w-4 h-4"></i> Copiar datos y abrir mi banco</button></div>
+  </div>
+
+  <!-- 6 COPIADO -->
+  <div id="screen-6" class="screen p-5 bg-white">
+    <div class="rise flex items-center justify-between mb-3" style="--i:0">
+      <button onclick="goToScreen(5)" class="back"><i data-lucide="arrow-left" class="w-5 h-5"></i></button>
+      <h3 class="font-bold text-slate-900 text-sm">¡Datos Listos!</h3><div class="w-9"></div>
+    </div>
+    <div class="rise text-center py-3 bg-emerald-50 rounded-3xl border border-emerald-100 mb-3" style="--i:1">
+      <div class="w-12 h-12 bg-emerald-500 text-white rounded-full mx-auto flex items-center justify-center shadow-md mb-2 pop-in"><i data-lucide="check" class="w-6 h-6"></i></div>
+      <h4 class="font-black text-slate-900 text-sm">¡Datos copiados al portapapeles!</h4>
+      <p id="res-para" class="text-[11px] text-slate-500 mt-0.5"></p>
+    </div>
+    <div class="rise space-y-2 mb-3" style="--i:2">
+      <button onclick="toast('Abriendo la app de tu banco...','ok')" class="btn btn-dark"><i data-lucide="external-link" class="w-4 h-4 text-yellow-400"></i> <span id="btn-banco-txt">Abrir App del Banco</span></button>
+      <button onclick="pagarSMS()" class="btn btn-blue"><i data-lucide="message-square" class="w-4 h-4 text-yellow-300"></i> Pagar por SMS (sin internet)</button>
+    </div>
+    <div class="rise bg-slate-50 border border-slate-200 rounded-2xl p-3 space-y-2 text-xs" style="--i:3">
+      <div class="flex justify-between items-center"><span class="text-slate-500">Cédula: <strong id="r-ced" class="text-slate-900"></strong></span><button onclick="copiarTexto('r-ced')" class="text-blue-600 font-bold hover:underline">Copiar</button></div>
+      <div class="flex justify-between items-center pt-1.5 border-t border-slate-200"><span class="text-slate-500">Teléfono: <strong id="r-tel" class="text-slate-900"></strong></span><button onclick="copiarTexto('r-tel')" class="text-blue-600 font-bold hover:underline">Copiar</button></div>
+      <div class="flex justify-between items-center pt-1.5 border-t border-slate-200"><span class="text-slate-500">Monto: <strong id="r-monto" class="text-slate-900"></strong></span><button onclick="copiarTexto('r-monto')" class="text-blue-600 font-bold hover:underline">Copiar</button></div>
+    </div>
+    <div class="rise pt-3 mt-auto space-y-2" style="--i:4">
+      <button onclick="confirmarPagoHecho()" class="btn btn-green"><i data-lucide="check-circle" class="w-4 h-4"></i> Ya realicé el pago</button>
+      <button onclick="goToScreen(1.6)" class="btn btn-light">Volver al Menú Principal</button>
+    </div>
+  </div>
+
+  <!-- 7 CALIFICAR -->
+  <div id="screen-7" class="screen p-6 justify-between bg-gradient-to-b from-amber-50 via-white to-white">
+    <div class="rise text-center pt-4" style="--i:0">
+      <div class="w-16 h-16 bg-emerald-500 text-white rounded-full mx-auto flex items-center justify-center shadow-lg pop-in mb-3"><i data-lucide="check" class="w-8 h-8"></i></div>
+      <h3 class="font-black text-slate-900 text-lg">¡Pago finalizado!</h3>
+      <p id="rate-pago" class="text-xs text-slate-500 mt-0.5"></p>
+    </div>
+    <div class="text-center">
+      <h4 class="rise font-black text-slate-900 text-xl leading-snug px-2" style="--i:1">Califica nuestra app para llegar más lejos</h4>
+      <div id="stars" class="rise flex justify-center gap-1.5 my-4" style="--i:2">
+        <button class="star" onclick="setRating(1)"><i data-lucide="star" class="w-9 h-9"></i></button>
+        <button class="star" onclick="setRating(2)"><i data-lucide="star" class="w-9 h-9"></i></button>
+        <button class="star" onclick="setRating(3)"><i data-lucide="star" class="w-9 h-9"></i></button>
+        <button class="star" onclick="setRating(4)"><i data-lucide="star" class="w-9 h-9"></i></button>
+        <button class="star" onclick="setRating(5)"><i data-lucide="star" class="w-9 h-9"></i></button>
+      </div>
+      <p id="rate-label" class="rise text-xs font-bold text-slate-400 min-h-[16px] mb-3" style="--i:2">Toca una estrella</p>
+      <div class="rise text-left" style="--i:3">
+        <label class="lbl">Leemos tus ideas <span class="normal-case font-medium text-slate-400">(Escribir aquí es opcional)</span></label>
+        <textarea id="rate-text" rows="3" maxlength="300" class="inp resize-none" placeholder="Cuéntanos qué mejorarías..."></textarea>
+      </div>
+    </div>
+    <div class="rise space-y-2 pt-3" style="--i:4">
+      <button id="btn-enviar-rate" onclick="enviarCalificacion()" class="btn btn-dark disabled:opacity-40" disabled><i data-lucide="send" class="w-4 h-4 text-yellow-400"></i> Enviar calificación</button>
+      <button onclick="omitirCalificacion()" class="btn btn-light">Ahora no</button>
+    </div>
+  </div>
+</main>
+
+<script>
+/* ---------- Tasa BCV automática (DolarAPI → BCV oficial) ---------- */
+const TASA_URL = 'https://ve.dolarapi.com/v1/dolares/oficial';
+let tasaInfo = null;
+try { tasaInfo = JSON.parse(localStorage.getItem('pagoya_tasa')); } catch(e){}
+let TASA = tasaInfo ? tasaInfo.valor : null, tasaEstado = tasaInfo ? 'cache' : 'sin', tasaCargando = false;
+const usdTxt = bs => TASA ? `≈ $ ${(bs / TASA).toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2})}` : '≈ $ --';
+const $ = id => document.getElementById(id);
+const ic = () => window.lucide && lucide.createIcons();
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => n.toLocaleString('de-DE', {minimumFractionDigits:2, maximumFractionDigits:2});
+const primerNombre = n => n.trim().split(/\s+/)[0];
+
+/* ---------- Almacenamiento (localStorage con respaldo en memoria) ---------- */
+const mem = {};
+const store = {
+  get(k){ try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : (mem[k] ?? null); } catch(e){ return mem[k] ?? null; } },
+  set(k,v){ mem[k] = v; try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} },
+  del(k){ delete mem[k]; try { localStorage.removeItem(k); } catch(e){} }
+};
+
+const TASA_PAR_URL = 'https://ve.dolarapi.com/v1/dolares/paralelo';
+let TASA_PAR = store.get('pagoya_tasa_par');
+/* ---------- Estado ---------- */
+const DEMO = { nombre:"José Altuve", nac:"V", cedula:"12345678", telefono:"04141234567", bancoCodigo:"0191", banco:"0191 - BNC", pin:"1234" };
+const HIST_DEMO = [
+  { tipo:'in', nombre:'María Pérez', sub:'Hace 15 mins • V-20.111.222', monto:500, hoy:true },
+  { tipo:'in', nombre:'Carlos Gómez', sub:'Ayer • V-15.444.333', monto:1250, hoy:false }
+];
+const COMERCIOS = [
+  { nombre:"Arepas El Pana", bancoCodigo:"0102", banco:"0102 - Banco de Venezuela (BDV)", cedula:"J-301234567", telefono:"04241112233" },
+  { nombre:"Farmacia San José", bancoCodigo:"0134", banco:"0134 - Banesco", cedula:"J-298765432", telefono:"04120001122" },
+  { nombre:"Luisa Fernández", bancoCodigo:"0105", banco:"0105 - Mercantil", cedula:"V-21456789", telefono:"04165554433" }
+];
+const COBROS = [
+  { nombre:"Ana Rodríguez", ced:"V-18.999.888", monto:350 },
+  { nombre:"Pedro Méndez", ced:"V-22.123.456", monto:1200 },
+  { nombre:"Bodega La Esquina", ced:"J-30.555.666", monto:85.5 }
+];
+const keyDe = u => `${u.nac}-${u.cedula}`;
+const KDEMO = keyDe(DEMO);
+const hk = () => 'pagoya_hist_' + keyDe(user);
+function guardarHist(){ if (user) store.set(hk(), historial); }
+function cargarHist(){ return store.get(hk()) || (keyDe(user) === KDEMO ? HIST_DEMO.map(x => ({...x})) : []); }
+// "Servidor" simulado: todas las cuentas registradas. "Dispositivo": cuenta recordada en este teléfono.
+let cuentas = store.get('pagoya_cuentas') || {};
+const viejo = store.get('pagoya_user');
+if (viejo && viejo.nac && !cuentas[keyDe(viejo)]) cuentas[keyDe(viejo)] = viejo;
+if (!cuentas[KDEMO]) cuentas[KDEMO] = DEMO;
+store.set('pagoya_cuentas', cuentas);
+let disp = store.get('pagoya_device');
+if (disp === null) disp = (viejo && viejo.nac) ? keyDe(viejo) : KDEMO;
+let user = cuentas[disp] || null;
+let historial = user ? cargarHist() : [];
+let session = false, enteredPin = "", intentos = 0, bloqueado = false, pago = null, escaneando = false;
+const PROTEGIDAS = [1.6, 3, 4, 5, 6, 7, 8];
+let rating = 0;
+
+/* ---------- Utilidades UI ---------- */
+let toastT;
+function toast(msg, tipo=''){
+  const t = $('toast'); t.textContent = msg; t.className = 'show ' + tipo;
+  clearTimeout(toastT); toastT = setTimeout(() => t.className = '', 2200);
+}
+function setErr(id, msg, inputId){
+  $(id).textContent = msg || '';
+  if (inputId){ const i = $(inputId); i.classList.toggle('err', !!msg); if (msg){ i.classList.remove('shake'); void i.offsetWidth; i.classList.add('shake'); } }
+}
+async function copiar(texto){
+  try { await navigator.clipboard.writeText(texto); return true; }
+  catch(e){
+    try { const ta = document.createElement('textarea'); ta.value = texto; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok; }
+    catch(e2){ return false; }
+  }
+}
+setInterval(() => { $('clock').textContent = new Date().toLocaleTimeString('es-VE',{hour:'numeric',minute:'2-digit',hour12:false}); }, 1000);
+
+/* ---------- Navegación ---------- */
+function goToScreen(n){
+  if (PROTEGIDAS.includes(n) && !session){ toast('Inicia sesión primero','error'); n = user ? 1.5 : 1.7; }
+  if (n === 1.5 && !user) n = 1.7;
+  if (n !== 1.8) detenerOtp();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(`screen-${n}`).classList.add('active');
+  if (n === 1.5) abrirLogin();
+  if (n === 1.7) resetLoginCompleto();
+  if (n === 8) pintarAjustes();
+  if (n === 1.6) renderMenu();
+  if (n === 3) renderizarQR();
+  if (n === 4) resetVisor();
+  if (n === 5) rellenarConfirmacion();
+  if (n === 6) rellenarResumen();
+  if (n === 7) { resetRating(); if (!$('rate-pago').textContent) $('rate-pago').textContent = 'Tu pago fue registrado'; }
+  ic();
+}
+function navTo(n){ // atajo del prototipo
+  if ((PROTEGIDAS.includes(n) || n === 1.5 || n === 1.8) && !user){ user = cuentas[KDEMO]; historial = cargarHist(); }
+  if (PROTEGIDAS.includes(n)){ session = true; if (n >= 5 && n !== 7 && !pago) pago = { payee: COMERCIOS[0], monto: 500, bancoOrigen: 'BDV' }; }
+  if (n === 1.8){ otp.key = user ? keyDe(user) : KDEMO; }
+  goToScreen(n);
+  if (n === 1.8) enviarOTP();
+}
+function iniciarSesion(){ goToScreen(user ? 1.5 : 1.7); }
+function abrirSheet(){ $('sheet').classList.add('open'); }
+function cerrarSheet(){ $('sheet').classList.remove('open'); }
+function bloquearSesion(){ cerrarSheet(); session = false; toast('App bloqueada'); goToScreen(1.5); }
+function olvidarDispositivo(){ if (user) bioSet(keyDe(user), null); session = false; pago = null; disp = ''; store.set('pagoya_device', ''); user = null; historial = []; }
+function cerrarSesionCompleta(){ cerrarSheet(); olvidarDispositivo(); toast('Sesión cerrada por completo'); goToScreen(1.7); }
+function cambiarCuenta(){ olvidarDispositivo(); goToScreen(1.7); }
+function resetDemo(){
+  Object.keys(cuentas).forEach(k => store.del('pagoya_hist_' + k));
+  ['pagoya_cuentas','pagoya_device','pagoya_user','pagoya_hist','pagoya_feedback','pagoya_bio'].forEach(k => store.del(k));
+  cuentas = { [KDEMO]: DEMO }; store.set('pagoya_cuentas', cuentas);
+  disp = KDEMO; user = cuentas[KDEMO]; historial = cargarHist(); session = false; pago = null;
+  ['reg-nombre','reg-cedula','reg-tel','reg-pin','reg-pin2'].forEach(i => $(i).value = '');
+  toast('Demo reiniciada','ok'); goToScreen(1);
+}
+
+/* ---------- Registro ---------- */
+function registrar(){
+  const nombre = $('reg-nombre').value.trim().replace(/\s+/g,' ');
+  const ced = $('reg-cedula').value.trim(), tel = $('reg-tel').value.trim();
+  const pin = $('reg-pin').value, pin2 = $('reg-pin2').value;
+  let ok = true;
+  const v = (cond, id, msg, inp) => { setErr(id, cond ? '' : msg, inp); if (!cond) ok = false; };
+  v(nombre.split(' ').length >= 2 && nombre.length >= 5, 'e-nombre', 'Escribe nombre y apellido', 'reg-nombre');
+  v(/^\d{6,9}$/.test(ced), 'e-cedula', 'Entre 6 y 9 dígitos', 'reg-cedula');
+  v(/^\d{7}$/.test(tel), 'e-tel', 'Deben ser 7 dígitos', 'reg-tel');
+  v(/^\d{4}$/.test(pin), 'e-pin', 'PIN de 4 números', 'reg-pin');
+  v(/^\d{4}$/.test(pin) && pin === pin2, 'e-pin2', 'Los PIN no coinciden', 'reg-pin2');
+  if (!ok){ toast('Revisa los campos marcados','error'); return; }
+  const sel = $('reg-banco');
+  const nueva = { nombre, nac: $('reg-nac').value, cedula: ced, telefono: $('reg-op').value + tel, bancoCodigo: sel.value, banco: sel.options[sel.selectedIndex].text, pin };
+  if (cuentas[keyDe(nueva)]){ setErr('e-cedula', 'Esta cédula ya tiene cuenta. Inicia sesión', 'reg-cedula'); toast('Cédula ya registrada', 'error'); return; }
+  cuentas[keyDe(nueva)] = nueva; store.set('pagoya_cuentas', cuentas);
+  user = nueva; disp = keyDe(nueva); store.set('pagoya_device', disp);
+  historial = []; guardarHist();
+  session = true; pago = null;
+  toast('¡Cuenta creada!', 'ok');
+  goToScreen(3);
+}
+
+/* ---------- Login con PIN ---------- */
+function abrirLogin(){
+  $('login-saludo').textContent = `Hola, ${primerNombre(user.nombre)}`;
+  if (!bloqueado) $('login-msg').textContent = 'Introduce tu PIN de 4 dígitos';
+  resetPin(); initKeypad();
+  const tieneBio = !!bioGet(keyDe(user));
+  $('btn-bio').style.display = tieneBio ? 'flex' : 'none';
+  if (tieneBio && !bloqueado) setTimeout(() => { if ($('screen-1.5').classList.contains('active') && !$('bio').classList.contains('open')) entrarConHuella(); }, 600);
+}
+function initKeypad(){
+  const k = $('random-keypad'); k.innerHTML = '';
+  const nums = [0,1,2,3,4,5,6,7,8,9].sort(() => Math.random() - .5);
+  const mk = n => { const b = document.createElement('button'); b.className = 'key'; b.textContent = n; b.onclick = () => pressPin(n); return b; };
+  nums.slice(0,9).forEach(n => k.appendChild(mk(n)));
+  k.appendChild(document.createElement('div'));
+  k.appendChild(mk(nums[9]));
+  const d = document.createElement('button'); d.className = 'key !bg-rose-50 !text-rose-600 flex items-center justify-center';
+  d.innerHTML = '<i data-lucide="delete" class="w-5 h-5"></i>'; d.onclick = () => { enteredPin = enteredPin.slice(0,-1); pintarDots(); };
+  k.appendChild(d); ic();
+}
+function pintarDots(estado=''){
+  [...$('pin-dots').children].forEach((d,i) => { d.className = 'dot' + (i < enteredPin.length ? ' ' + (estado || 'on') : ''); });
+}
+function resetPin(){ enteredPin = ''; pintarDots(); }
+function pressPin(n){
+  if (bloqueado || enteredPin.length >= 4) return;
+  enteredPin += n; pintarDots();
+  if (enteredPin.length < 4) return;
+  if (enteredPin === user.pin){
+    pintarDots('ok'); intentos = 0; session = true; toast(`¡Bienvenido, ${primerNombre(user.nombre)}!`, 'ok');
+    setTimeout(() => goToScreen(1.6), 450);
+  } else {
+    intentos++; pintarDots('bad');
+    const d = $('pin-dots'); d.classList.remove('shake'); void d.offsetWidth; d.classList.add('shake');
+    if (navigator.vibrate) navigator.vibrate(150);
+    if (intentos >= 3) return bloquear();
+    $('login-msg').innerHTML = `<span class="text-rose-600 font-bold">PIN incorrecto. Te quedan ${3 - intentos} intento${3 - intentos === 1 ? '' : 's'}</span>`;
+    setTimeout(() => { resetPin(); initKeypad(); }, 600);
+  }
+}
+function bloquear(){
+  bloqueado = true; let s = 15;
+  const tick = () => { $('login-msg').innerHTML = `<span class="text-rose-600 font-bold">Demasiados intentos. Espera ${s}s</span>`; };
+  tick(); $('random-keypad').style.opacity = '.4';
+  const iv = setInterval(() => {
+    s--; if (s > 0) return tick();
+    clearInterval(iv); bloqueado = false; intentos = 0; $('random-keypad').style.opacity = '1';
+    $('login-msg').textContent = 'Puedes intentarlo de nuevo'; resetPin(); initKeypad();
+  }, 1000);
+}
+
+/* ---------- Login completo (cédula + PIN) y OTP por SMS ---------- */
+let lcIntentos = 0, lcBloq = false;
+const otp = { code:'', exp:0, sendAt:0, fails:0, key:null };
+let otpIv = null, smsT;
+function resetLoginCompleto(){
+  ['lc-ced','lc-pin'].forEach(i => { $(i).value = ''; $(i).classList.remove('err'); }); setErr('e-lc', '');
+}
+function loginCompleto(){
+  if (lcBloq) return;
+  const ced = $('lc-ced').value.trim(), pin = $('lc-pin').value;
+  if (!/^\d{6,9}$/.test(ced)){ setErr('e-lc', 'Escribe tu cédula (6 a 9 dígitos)', 'lc-ced'); return; }
+  if (!/^\d{4}$/.test(pin)){ setErr('e-lc', 'Escribe tu PIN de 4 números', 'lc-pin'); return; }
+  $('lc-ced').classList.remove('err');
+  const key = `${$('lc-nac').value}-${ced}`, c = cuentas[key];
+  if (!c || c.pin !== pin){
+    lcIntentos++; $('lc-pin').value = '';
+    if (lcIntentos >= 3) return bloquearLC();
+    setErr('e-lc', `Cédula o PIN incorrectos. Te quedan ${3 - lcIntentos} intento${3 - lcIntentos === 1 ? '' : 's'}`, 'lc-pin'); return;
+  }
+  lcIntentos = 0; otp.key = key;
+  goToScreen(1.8); enviarOTP();
+}
+function bloquearLC(){
+  lcBloq = true; let s = 15; const b = $('btn-lc'); b.disabled = true;
+  const t = () => setErr('e-lc', `Demasiados intentos. Espera ${s}s`);
+  t();
+  const iv = setInterval(() => { s--; if (s > 0) return t(); clearInterval(iv); lcBloq = false; lcIntentos = 0; b.disabled = false; setErr('e-lc', ''); }, 1000);
+}
+const enmascarar = t => t.slice(0,4) + '•••' + t.slice(-4);
+function enviarOTP(reenvio){
+  const a = new Uint32Array(1); crypto.getRandomValues(a);
+  otp.code = String(100000 + a[0] % 900000); otp.exp = Date.now() + 300000; otp.sendAt = Date.now(); otp.fails = 0;
+  $('otp-input').value = ''; pintarOTP(); setErr('e-otp', '');
+  $('otp-tel').textContent = enmascarar(cuentas[otp.key].telefono);
+  setTimeout(mostrarSMS, 1200);
+  clearInterval(otpIv); otpIv = setInterval(otpTick, 1000); otpTick();
+  setTimeout(() => $('otp-input').focus(), 450);
+  if (reenvio) toast('Código reenviado', 'ok');
+}
+function otpTick(){
+  const left = Math.max(0, Math.ceil((otp.exp - Date.now()) / 1000));
+  $('otp-exp').textContent = left ? `El código vence en ${Math.floor(left/60)}:${String(left%60).padStart(2,'0')}` : 'El código venció. Pide uno nuevo';
+  const w = Math.max(0, 30 - Math.floor((Date.now() - otp.sendAt) / 1000)), r = $('btn-reenviar');
+  r.disabled = w > 0; r.textContent = w > 0 ? `Reenviar código (${w}s)` : 'Reenviar código';
+}
+function detenerOtp(){ clearInterval(otpIv); ocultarSMS(); }
+function mostrarSMS(){
+  if (!$('screen-1.8').classList.contains('active')) return;
+  $('sms-code').textContent = otp.code; $('sms-notif').classList.add('show');
+  clearTimeout(smsT); smsT = setTimeout(ocultarSMS, 12000);
+}
+function ocultarSMS(){ $('sms-notif').classList.remove('show'); }
+function usarCodigoSMS(){ $('otp-input').value = otp.code; otpInput(); ocultarSMS(); }
+function pintarOTP(){
+  const v = $('otp-input').value;
+  [...$('otp-boxes').children].forEach((b, i) => { b.textContent = v[i] || ''; b.className = 'otp-box' + (i < v.length ? ' on' : '') + (i === v.length ? ' cur' : ''); });
+}
+function otpInput(){
+  const i = $('otp-input'); i.value = i.value.replace(/\D/g, '').slice(0, 6);
+  pintarOTP(); setErr('e-otp', '');
+  if (i.value.length === 6) verificarOTP();
+}
+function sacudirOTP(){ const b = $('otp-boxes'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+function verificarOTP(){
+  const v = $('otp-input').value;
+  if (v.length < 6){ setErr('e-otp', 'Escribe los 6 dígitos'); return; }
+  if (Date.now() > otp.exp){ setErr('e-otp', 'El código venció. Pide uno nuevo'); sacudirOTP(); return; }
+  if (v !== otp.code){
+    otp.fails++; sacudirOTP(); $('otp-input').value = ''; pintarOTP();
+    if (otp.fails >= 3){ toast('Demasiados intentos. Inicia de nuevo', 'error'); return goToScreen(1.7); }
+    setErr('e-otp', `Código incorrecto. Te quedan ${3 - otp.fails} intento${3 - otp.fails === 1 ? '' : 's'}`); return;
+  }
+  disp = otp.key; store.set('pagoya_device', disp);   // este teléfono queda como dispositivo de confianza
+  user = cuentas[disp]; historial = cargarHist(); session = true; pago = null;
+  toast(`¡Bienvenido, ${primerNombre(user.nombre)}!`, 'ok'); goToScreen(1.6);
+}
+
+/* ---------- Menú e historial ---------- */
+function renderMenu(){
+  $('menu-nombre-user').textContent = `Hola, ${primerNombre(user.nombre)}`;
+  $('menu-sesion').textContent = `● Sesión Activa (${user.banco.split(' - ')[1] || user.banco})`;
+  renderHistorial();
+}
+function renderHistorial(){
+  const l = $('historial-lista');
+  l.innerHTML = historial.length ? historial.map(h => `
+    <div class="flex justify-between items-center text-xs p-2 rounded-xl ${h.tipo === 'in' ? 'bg-emerald-50' : 'bg-rose-50'} ${h.nuevo ? 'pop-in' : ''}">
+      <div><p class="font-bold text-slate-900">${esc(h.nombre)}</p><p class="text-[10px] text-slate-500">${esc(h.sub)}</p></div>
+      <span class="font-black ${h.tipo === 'in' ? 'text-emerald-600' : 'text-rose-600'}">${h.tipo === 'in' ? '+' : '−'} Bs. ${fmt(h.monto)}</span>
+    </div>`).join('') : '<p class="text-center text-[11px] text-slate-400 py-5">Aún no tienes movimientos</p>';
+  historial.forEach(h => h.nuevo = false);
+  guardarHist();
+}
+function simularCobro(){
+  const c = COBROS[Math.floor(Math.random() * COBROS.length)];
+  historial.unshift({ tipo:'in', nombre:c.nombre, sub:`Hace un momento • ${c.ced}`, monto:c.monto, hoy:true, nuevo:true });
+  renderHistorial();
+  toast(`🔔 Pago Móvil recibido: Bs. ${fmt(c.monto)}`, 'ok');
+}
+
+/* ---------- QR ---------- */
+const sinAcentos = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'');
+function textoQR(){ return sinAcentos(`PAGOYA|${user.bancoCodigo}|${user.nac}-${user.cedula}|${user.telefono}|${user.nombre}`); }
+function dibujarQR(canvas, texto, tam){
+  const qr = qrcode(0, 'H'); qr.addData(texto); qr.make();
+  const n = qr.getModuleCount(), q = 2, cell = Math.max(1, Math.floor(tam / (n + q*2))), real = cell * (n + q*2);
+  canvas.width = canvas.height = real;
+  const c = canvas.getContext('2d');
+  c.fillStyle = '#fff'; c.fillRect(0, 0, real, real); c.fillStyle = '#0f172a';
+  for (let r = 0; r < n; r++) for (let k = 0; k < n; k++) if (qr.isDark(r, k)) c.fillRect((k+q)*cell, (r+q)*cell, cell, cell);
+  const L = real * .17, x = (real - L) / 2;               // logo central (el nivel H lo tolera)
+  c.fillStyle = '#fff'; c.fillRect(x - 3, x - 3, L + 6, L + 6);
+  c.fillStyle = '#0f172a'; c.beginPath(); c.roundRect ? c.roundRect(x, x, L, L, L*.25) : c.rect(x, x, L, L); c.fill();
+  c.fillStyle = '#facc15'; c.font = `900 ${L*.46}px Inter, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('P$', real/2, real/2 + 1);
+}
+function renderizarQR(){
+  $('qr-nombre').textContent = user.nombre;
+  $('qr-info').textContent = `${user.bancoCodigo} • ${user.nac}-${user.cedula} • ${user.telefono}`;
+  const cv = $('qr-canvas');
+  try {
+    if (typeof qrcode === 'undefined') throw new Error('lib');
+    dibujarQR(cv, textoQR(), 360);
+    cv.style.display = 'block'; $('qr-error').classList.add('hidden');
+    cv.classList.remove('pop-in'); void cv.offsetWidth; cv.classList.add('pop-in');
+  } catch(e){ cv.style.display = 'none'; $('qr-error').classList.remove('hidden'); console.error('QR:', e); }
+}
+function descargarQR(){
+  try {
+    const cv = document.createElement('canvas'); dibujarQR(cv, textoQR(), 800);
+    const a = document.createElement('a'); a.href = cv.toDataURL('image/png');
+    a.download = `PAGOYA-QR-${primerNombre(sinAcentos(user.nombre))}.png`; a.click();
+    toast('QR descargado', 'ok');
+  } catch(e){ toast('No se pudo descargar el QR', 'error'); }
+}
+
+/* ---------- Escaneo ---------- */
+function resetVisor(){
+  escaneando = false;
+  $('visor').style.boxShadow = '0 0 0 2px #facc15'; $('visor').style.animation = '';
+  $('visor-txt').innerHTML = '<i data-lucide="scan-line" class="w-12 h-12 text-yellow-400 mb-2 opacity-80"></i><p class="text-xs text-slate-300 font-medium">Apunta al código QR del comercio o persona</p>';
+  $('btn-sim-scan').disabled = false; $('btn-galeria').disabled = false;
+}
+function simularEscaneo(){ aceptarPayee(COMERCIOS[Math.floor(Math.random() * COMERCIOS.length)]); }
+const BANCOS = { '0191':'0191 - BNC', '0102':'0102 - Banco de Venezuela (BDV)', '0134':'0134 - Banesco', '0105':'0105 - Mercantil', '0108':'0108 - Provincial' };
+function subirDesdeGaleria(e){
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f) return;
+  if (!f.type.startsWith('image/')){ toast('Elige una imagen (JPG o PNG)', 'error'); return; }
+  if (typeof jsQR === 'undefined'){ toast('No se pudo cargar el lector de QR', 'error'); return; }
+  const url = URL.createObjectURL(f), img = new Image();
+  img.onload = () => {
+    const esc = Math.min(1, 1100 / Math.max(img.width, img.height));
+    const cv = document.createElement('canvas'); cv.width = Math.round(img.width * esc); cv.height = Math.round(img.height * esc);
+    const c = cv.getContext('2d', { willReadFrequently: true }); c.drawImage(img, 0, 0, cv.width, cv.height);
+    URL.revokeObjectURL(url);
+    const r = jsQR(c.getImageData(0, 0, cv.width, cv.height).data, cv.width, cv.height);
+    if (!r){ toast('No encontramos un QR en esa imagen', 'error'); return; }
+    leerTextoQR(r.data);
+  };
+  img.onerror = () => { URL.revokeObjectURL(url); toast('No se pudo abrir la imagen', 'error'); };
+  img.src = url;
+}
+function leerTextoQR(txt){
+  const p = txt.split('|');
+  if (p[0] !== 'PAGOYA' || p.length < 5 || !/^\d{4}$/.test(p[1]) || !/^[VJEG]-\d{6,9}$/.test(p[2]) || !/^\d{11}$/.test(p[3])){ toast('Este QR no es de PAGOYA', 'error'); return; }
+  if (p[2] === keyDe(user)){ toast('Ese es tu propio QR: no puedes pagarte a ti mismo', 'error'); return; }
+  aceptarPayee({ nombre: p.slice(4).join('|'), bancoCodigo: p[1], banco: BANCOS[p[1]] || p[1], cedula: p[2], telefono: p[3] });
+}
+function aceptarPayee(payee){
+  if (escaneando) return; escaneando = true; $('btn-sim-scan').disabled = true; $('btn-galeria').disabled = true;
+  pago = { payee, monto: 500, bancoOrigen: 'BDV' };
+  $('visor').style.animation = 'flash .6s';
+  $('visor-txt').innerHTML = `<div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center pop-in mb-2"><i data-lucide="check" class="w-7 h-7"></i></div><p class="text-xs font-bold">${esc(payee.nombre)}</p><p class="text-[10px] text-slate-300">QR leído correctamente</p>`;
+  ic(); setTimeout(() => goToScreen(5), 900);
+}
+
+/* ---------- Confirmar pago ---------- */
+function parseMonto(s){
+  s = String(s).trim().replace(/\s|Bs\.?/gi, ''); if (!s) return NaN;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  else if (/^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+  return /^\d+(\.\d+)?$/.test(s) ? parseFloat(s) : NaN;
+}
+function setMonto(n){ $('monto').value = fmt(n); actualizarUSD(); }
+function formatearMonto(){ const n = parseMonto($('monto').value); if (n > 0) $('monto').value = fmt(n); actualizarUSD(); }
+function actualizarUSD(){
+  const n = parseMonto($('monto').value);
+  $('usd').textContent = n > 0 ? usdTxt(n) : '';
+  if (n > 0) setErr('e-monto', '', 'monto');
+}
+function rellenarConfirmacion(){
+  const p = pago.payee;
+  $('conf-nombre').textContent = p.nombre; $('conf-banco').textContent = p.banco;
+  $('conf-cedula').textContent = p.cedula; $('conf-telefono').textContent = p.telefono;
+  const b = [...$('tu-banco').options].find(o => user.banco.includes(o.value));
+  if (b && !pago.bancoElegido) $('tu-banco').value = b.value;
+  setMonto(pago.monto);
+}
+function copiarYPrepararPago(){
+  const n = parseMonto($('monto').value);
+  if (!(n > 0)){ setErr('e-monto', 'Escribe un monto válido mayor a 0', 'monto'); toast('Monto inválido', 'error'); return; }
+  pago.monto = n; pago.bancoOrigen = $('tu-banco').value; pago.bancoElegido = true;
+  const p = pago.payee;
+  copiar(`Banco: ${p.bancoCodigo}\nCédula: ${p.cedula.replace('-','')}\nTeléfono: ${p.telefono}\nMonto: ${fmt(n)}`);
+  goToScreen(6);
+}
+
+/* ---------- Datos listos ---------- */
+function rellenarResumen(){
+  const p = pago.payee;
+  $('r-ced').textContent = p.cedula.replace('-', ''); $('r-tel').textContent = p.telefono; $('r-monto').textContent = fmt(pago.monto);
+  $('res-para').textContent = `Para ${p.nombre} • ${p.banco}`;
+  $('btn-banco-txt').textContent = `Abrir App ${pago.bancoOrigen}`;
+}
+async function copiarTexto(id){ const t = $(id).textContent, ok = await copiar(t); toast(ok ? `¡${t} copiado!` : 'No se pudo copiar', ok ? 'ok' : 'error'); }
+async function pagarSMS(){
+  const p = pago.payee, msg = `PAGAR ${p.bancoCodigo} ${p.telefono} ${p.cedula.replace('-','')} ${pago.monto.toFixed(2)}`;
+  await copiar(msg); toast('Mensaje SMS listo y copiado', 'ok');
+}
+function confirmarPagoHecho(){
+  historial.unshift({ tipo:'out', nombre:pago.payee.nombre, sub:`Hace un momento • ${pago.payee.cedula}`, monto:pago.monto, hoy:true, nuevo:true });
+  renderHistorial();
+  const resumen = `Bs. ${fmt(pago.monto)} a ${pago.payee.nombre}`; pago = null;
+  goToScreen(7); $('rate-pago').textContent = resumen;
+}
+
+/* ---------- Calificación ---------- */
+const ETIQ = ['', 'Muy mala 😞', 'Podría mejorar 😕', 'Está bien 🙂', '¡Muy buena! 😃', '¡Excelente! 🤩'];
+function resetRating(){
+  rating = 0; $('rate-text').value = ''; $('btn-enviar-rate').disabled = true;
+  $('rate-label').textContent = 'Toca una estrella'; $('rate-label').classList.remove('sel');
+  document.querySelectorAll('.star').forEach(b => b.classList.remove('on'));
+}
+function setRating(n){
+  rating = n; $('btn-enviar-rate').disabled = false;
+  $('rate-label').textContent = ETIQ[n]; $('rate-label').classList.add('sel');
+  document.querySelectorAll('.star').forEach((b, i) => {
+    b.classList.toggle('on', i < n); b.classList.remove('pulse'); void b.offsetWidth;
+    if (i < n) { b.style.animationDelay = (i * 50) + 'ms'; b.classList.add('pulse'); }
+  });
+}
+function enviarCalificacion(){
+  if (!rating) return;
+  const lista = store.get('pagoya_feedback') || [];
+  lista.push({ estrellas: rating, comentario: $('rate-text').value.trim(), fecha: new Date().toISOString() });
+  store.set('pagoya_feedback', lista);
+  toast('¡Gracias por tu calificación! ⭐', 'ok'); goToScreen(1.6);
+}
+function omitirCalificacion(){ goToScreen(1.6); }
+
+/* ---------- Modo oscuro ---------- */
+const mqDark = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : { matches:false };
+let tema = store.get('pagoya_tema') || 'auto';
+function aplicarTema(anim){
+  if (anim){ document.body.classList.add('tema-anim'); setTimeout(() => document.body.classList.remove('tema-anim'), 450); }
+  document.body.classList.toggle('dark', tema === 'oscuro' || (tema === 'auto' && mqDark.matches));
+}
+function setTema(t){ tema = t; store.set('pagoya_tema', t); aplicarTema(true); pintarAjustes(); }
+if (mqDark.addEventListener) mqDark.addEventListener('change', () => { if (tema === 'auto') aplicarTema(true); });
+aplicarTema();
+
+/* ---------- Huella / biometría (WebAuthn real; simulada si el dispositivo no la soporta) ---------- */
+const bioGet = k => (store.get('pagoya_bio') || {})[k] || null;
+function bioSet(k, v){ const m = store.get('pagoya_bio') || {}; if (v) m[k] = v; else delete m[k]; store.set('pagoya_bio', m); }
+const b64 = buf => btoa(String.fromCharCode(...new Uint8Array(buf)));
+const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+const bioRealOK = () => window.isSecureContext && window.PublicKeyCredential && navigator.credentials;
+let bioResolve = null;
+function bioSim(titulo){
+  return new Promise(res => {
+    bioResolve = res; $('bio-titulo').textContent = titulo;
+    $('bio-icon').classList.remove('ok'); $('bio-estado').textContent = 'Coloca tu dedo en el sensor';
+    $('bio').classList.add('open'); ic();
+  });
+}
+function bioTocar(){
+  if (!bioResolve) return;
+  $('bio-icon').classList.add('ok'); $('bio-estado').textContent = 'Huella reconocida ✓';
+  setTimeout(() => cerrarBio(true), 650);
+}
+function cerrarBio(ok){ $('bio').classList.remove('open'); const r = bioResolve; bioResolve = null; if (r) r(ok); }
+async function bioActivar(){
+  const k = keyDe(user);
+  if (bioRealOK()){
+    try {
+      const c = await navigator.credentials.create({ publicKey: {
+        challenge: crypto.getRandomValues(new Uint8Array(32)), rp: { name: 'PAGOYA' },
+        user: { id: new TextEncoder().encode(k), name: k, displayName: user.nombre },
+        pubKeyCredParams: [{ type:'public-key', alg:-7 }, { type:'public-key', alg:-257 }],
+        authenticatorSelection: { authenticatorAttachment:'platform', userVerification:'required' }, timeout: 60000 } });
+      bioSet(k, { modo:'real', id: b64(c.rawId) }); return true;
+    } catch(e){ if (e.name === 'NotAllowedError') return false; }
+  }
+  const ok = await bioSim('Activa tu huella');
+  if (ok) bioSet(k, { modo:'sim' });
+  return ok;
+}
+async function bioVerificar(titulo){
+  const b = bioGet(keyDe(user)); if (!b) return false;
+  if (b.modo === 'real'){
+    try {
+      await navigator.credentials.get({ publicKey: { challenge: crypto.getRandomValues(new Uint8Array(32)),
+        allowCredentials: [{ type:'public-key', id: unb64(b.id) }], userVerification:'required', timeout: 60000 } });
+      return true;
+    } catch(e){ return false; }
+  }
+  return bioSim(titulo);
+}
+async function entrarConHuella(){
+  if (bloqueado || !user) return;
+  if (await bioVerificar('Confirma tu huella para entrar')){
+    intentos = 0; session = true; toast(`¡Bienvenido, ${primerNombre(user.nombre)}!`, 'ok'); goToScreen(1.6);
+  } else toast('No se pudo verificar. Usa tu PIN', 'error');
+}
+async function toggleBio(){
+  const k = keyDe(user);
+  if (bioGet(k)){ bioSet(k, null); toast('Huella desactivada'); }
+  else toast(await bioActivar() ? '¡Huella activada!' : 'No se activó la huella', await bioActivar.length >= 0 && bioGet(k) ? 'ok' : 'error');
+  pintarAjustes();
+}
+
+/* ---------- Ajustes y tasa en pantalla ---------- */
+function pintarAjustes(){
+  ['claro','oscuro','auto'].forEach(t => $('th-' + t).classList.toggle('on', tema === t));
+  if (!user) return;
+  const b = bioGet(keyDe(user));
+  $('sw-bio').classList.toggle('on', !!b);
+  $('bio-modo-txt').textContent = b ? (b.modo === 'real' ? 'Activada con la biometría de tu teléfono' : 'Activada (modo simulado del prototipo)') : 'Entra sin escribir tu PIN';
+  $('aj-nombre').textContent = user.nombre; $('aj-ced').textContent = `${user.nac}-${user.cedula}`; $('aj-banco').textContent = user.banco;
+}
+function pintarTasa(cargando){
+  document.querySelectorAll('.t-tasa').forEach(e => e.textContent = TASA ? fmt(TASA) : '--');
+  document.querySelectorAll('.t-par').forEach(e => e.textContent = TASA_PAR ? fmt(TASA_PAR) : '--');
+  const f = tasaInfo ? new Date(tasaInfo.fecha || tasaInfo.guardado) : null, ok = f && !isNaN(f);
+  const corto = ok ? (f.toDateString() === new Date().toDateString() ? 'hoy' : f.toLocaleDateString('es-VE', { day:'numeric', month:'short' })) : '';
+  const largo = ok ? f.toLocaleString('es-VE', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : '';
+  let txt, det;
+  if (cargando){ txt = 'Actualizando…'; det = 'Consultando al BCV…'; }
+  else if (tasaEstado === 'ok'){ txt = `BCV · ${corto || 'ahora'}`; det = `Tasa oficial del BCV • ${largo || 'actualizada ahora'}`; }
+  else if (TASA){ txt = `Sin conexión · ${corto || 'guardada'}`; det = `Sin conexión: usando la última tasa guardada (${largo || 'fecha desconocida'})`; }
+  else { txt = 'Sin tasa'; det = 'No se pudo obtener la tasa. Revisa tu conexión y toca Actualizar.'; }
+  document.querySelectorAll('.tasa-txt').forEach(e => e.textContent = txt);
+  document.querySelectorAll('.tasa-ic').forEach(e => e.classList.toggle('animate-spin', !!cargando));
+  const d = $('aj-tasa-estado'); if (d) d.textContent = det;
+  if (!cargando){ if (user) renderHistorial(); actualizarUSD(); }
+}
+async function cargarTasa(manual){
+  if (tasaCargando) return; tasaCargando = true; pintarTasa(true);
+  const ctl = new AbortController(), to = setTimeout(() => ctl.abort(), 7000);
+  try {
+    const r = await fetch(TASA_URL, { signal: ctl.signal, cache: 'no-store' });
+    if (!r.ok) throw new Error('http ' + r.status);
+    const d = await r.json(), v = Number(d.promedio ?? d.venta);
+    if (!(v > 0)) throw new Error('tasa inválida');
+    TASA = v; tasaInfo = { valor: v, fecha: d.fechaActualizacion || null, guardado: Date.now() };
+    store.set('pagoya_tasa', tasaInfo); tasaEstado = 'ok';
+    try { const r2 = await fetch(TASA_PAR_URL, { signal: ctl.signal, cache: 'no-store' }); if (r2.ok){ const d2 = await r2.json(), v2 = Number(d2.promedio ?? d2.venta); if (v2 > 0){ TASA_PAR = v2; store.set('pagoya_tasa_par', v2); } } } catch(e2){}
+    if (manual) toast('Tasa BCV actualizada', 'ok');
+  } catch(e){
+    tasaEstado = TASA ? 'cache' : 'sin';
+    if (manual) toast(TASA ? 'Sin conexión: usando la última tasa guardada' : 'No se pudo obtener la tasa BCV', 'error');
+  } finally { clearTimeout(to); tasaCargando = false; pintarTasa(); ic(); }
+}
+setInterval(() => cargarTasa(), 30 * 60 * 1000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && (!tasaInfo || Date.now() - tasaInfo.guardado > 30 * 60 * 1000)) cargarTasa(); });
+
+document.addEventListener('DOMContentLoaded', () => { ic(); pintarTasa(); cargarTasa(); });
+</script>
+<script>
+/* PAGOYA – mejoras visuales + tutorial de bienvenida (v3.0) */
+(function(){
+const css = `
+.phone-frame{box-shadow:0 40px 80px -20px #000a,0 0 0 1px #ffffff14,inset 0 0 0 1px #ffffff0d}
+.btn{background-image:linear-gradient(180deg,#ffffff1f,#fff0);letter-spacing:.01em}
+.btn-yellow{background-image:linear-gradient(135deg,#fde047,#facc15 55%,#f59e0b)}
+.btn-dark{background-image:linear-gradient(135deg,#1e293b,#0f172a)}
+.card{transition:transform .2s,box-shadow .2s}.card:hover{box-shadow:0 8px 20px -8px #0002}
+.screen h3{letter-spacing:-.01em}
+#rate-label.sel{color:#0f172a}.dark #rate-label.sel{color:#f1f5f9}
+.tu-note{display:flex;gap:.6rem;align-items:flex-start;background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:1rem;padding:.65rem .75rem;text-align:left}
+.tu-note i{flex-shrink:0;width:18px;height:18px;color:#b45309;margin-top:1px}
+.tu-note p{font-size:11px;line-height:1.35;color:#78350f}.tu-note b{color:#92400e}
+.dark .tu-note{background:linear-gradient(135deg,#2a2208,#3b2a0a);border-color:#6b5710}.dark .tu-note p{color:#fde68a}.dark .tu-note b{color:#fcd34d}
+#tuto{display:none;position:absolute;inset:0;z-index:65;flex-direction:column;background:linear-gradient(180deg,#fffbeb,#fff 45%,#eff6ff);overflow:hidden;touch-action:pan-y}
+#tuto.open{display:flex;animation:tuIn .45s cubic-bezier(.2,.8,.2,1)}
+@keyframes tuIn{from{opacity:0;transform:scale(1.04)}to{opacity:1;transform:none}}
+.dark #tuto{background:linear-gradient(180deg,#13203a,#0b1220 55%,#0f1a2e)}
+.tu-top{padding:14px 20px 0;display:flex;align-items:center;gap:12px}
+.tu-bars{flex:1;display:flex;gap:5px}
+.tu-bars i{flex:1;height:4px;border-radius:9px;background:#e2e8f0;overflow:hidden;position:relative}
+.tu-bars i::after{content:'';position:absolute;inset:0;background:#0f172a;transform:scaleX(0);transform-origin:left;transition:transform .45s}
+.tu-bars i.done::after{transform:none}.tu-bars i.on::after{transform:none;background:#facc15}
+.dark .tu-bars i{background:#2b3a52}.dark .tu-bars i::after{background:#f1f5f9}
+.tu-skip{font-size:11px;font-weight:700;color:#64748b}
+#tu-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24px;text-align:center}
+#tu-body>*{animation:up .55s both}#tu-body>.tu-art{animation-delay:0s}#tu-body>h3{animation-delay:.18s}#tu-body>p{animation-delay:.28s}#tu-body>.tu-note{animation-delay:.4s}
+#tu-body h3{font-size:1.4rem;font-weight:900;color:#0f172a;letter-spacing:-.02em;line-height:1.15;margin-top:1.4rem}
+#tu-body p.tu-tx{font-size:.8rem;color:#475569;line-height:1.5;margin-top:.6rem}
+.dark #tu-body h3{color:#f1f5f9}.dark #tu-body p.tu-tx{color:#94a3b8}
+.tu-foot{padding:12px 20px 20px;display:flex;gap:10px}
+.tu-art{position:relative;width:100%;height:190px;display:flex;align-items:center;justify-content:center}
+.tu-logo{width:96px;height:96px;border-radius:28px;background:linear-gradient(135deg,#fbbf24,#2563eb 60%,#ef4444);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:2rem;box-shadow:0 20px 40px -10px #2563eb88;animation:float 4s ease-in-out infinite}
+.tu-ring{position:absolute;border-radius:50%;border:2px solid #facc15;opacity:0;animation:tuRing 3s ease-out infinite}.tu-ring.r2{animation-delay:1.5s}
+@keyframes tuRing{0%{width:96px;height:96px;opacity:.7}100%{width:210px;height:210px;opacity:0}}
+.tu-dot{position:absolute;border-radius:50%;animation:float 3s ease-in-out infinite}
+.tu-flow{display:flex;align-items:center;width:100%;gap:0}
+.tu-node{width:84px;flex-shrink:0;padding:.8rem .4rem;border-radius:1.2rem;background:#fff;border:1px solid #e2e8f0;box-shadow:0 8px 20px -10px #0003;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10px;font-weight:800;color:#0f172a}
+.tu-node i,.tu-node svg{width:26px;height:26px;color:#2563eb}
+.dark .tu-node{background:#111c2e;border-color:#2b3a52;color:#f1f5f9}
+.tu-line{flex:1;height:3px;background:repeating-linear-gradient(90deg,#cbd5e1 0 6px,transparent 6px 12px);position:relative;margin:0 4px}
+.tu-coin{position:absolute;top:-11px;left:0;width:25px;height:25px;border-radius:50%;background:#facc15;color:#0f172a;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px #facc1599;animation:tuCoin 2.2s ease-in-out infinite}
+@keyframes tuCoin{0%{left:0;transform:scale(.6);opacity:0}15%{opacity:1;transform:scale(1)}85%{opacity:1}100%{left:calc(100% - 25px);transform:scale(.6);opacity:0}}
+.tu-nw{position:relative;display:flex;align-items:center;gap:8px;background:#fff1f2;border:1px solid #fecdd3;color:#be123c;border-radius:99px;padding:.4rem .8rem;font-size:11px;font-weight:800;margin-bottom:22px;animation:pop .5s .3s both}
+.tu-nw svg{width:16px;height:16px}.tu-nw u{text-decoration:none;position:relative}
+.tu-nw u::after{content:'';position:absolute;left:-3px;top:50%;height:2px;width:0;background:#be123c;animation:tuStrike .5s .9s forwards}
+@keyframes tuStrike{to{width:calc(100% + 6px)}}
+.dark .tu-nw{background:#33121a;border-color:#6b1d2c;color:#fb7185}
+.tu-card{position:relative;width:150px;height:150px;border-radius:1.6rem;background:#fff;border:1px solid #e2e8f0;box-shadow:0 20px 40px -14px #0004;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.tu-card svg.q{width:96px;height:96px;color:#0f172a}
+.tu-card::after{content:'';position:absolute;left:10px;right:10px;height:3px;border-radius:3px;background:#facc15;box-shadow:0 0 14px #eab308;animation:scan 2.2s ease-in-out infinite}
+.tu-ok{position:absolute;right:calc(50% - 98px);bottom:6px;width:38px;height:38px;border-radius:50%;background:#10b981;color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 16px #10b98166;animation:pop .5s 1.1s both}
+.tu-ok svg{width:20px;height:20px}
+.tu-steps{display:flex;align-items:flex-start;justify-content:center;width:100%}
+.tu-st{width:70px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:10px;font-weight:800;color:#334155;animation:pop .5s both}
+.dark .tu-st{color:#cbd5e1}
+.tu-st>span{width:54px;height:54px;border-radius:1.1rem;background:#0f172a;color:#facc15;display:flex;align-items:center;justify-content:center;box-shadow:0 10px 20px -8px #0006}
+.tu-st:nth-child(1)>span{background:#facc15;color:#0f172a}.tu-st:nth-child(5)>span{background:#059669;color:#fff}
+.tu-st svg{width:24px;height:24px}
+.tu-cn{width:28px;height:3px;margin-top:25px;background:#e2e8f0;border-radius:3px;position:relative;overflow:hidden}
+.tu-cn::after{content:'';position:absolute;inset:0;background:#facc15;transform:scaleX(0);transform-origin:left;animation:tuFill .5s forwards}
+@keyframes tuFill{to{transform:none}}
+.tu-shield{width:104px;height:104px;border-radius:50%;background:linear-gradient(135deg,#10b981,#059669);color:#fff;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 18px 36px -10px #05966988;animation:pop .6s both}
+.tu-shield svg{width:48px;height:48px}.tu-shield::before,.tu-shield::after{content:'';position:absolute;inset:0;border-radius:50%;border:2px solid #10b981;animation:tuRing2 2.4s infinite}.tu-shield::after{animation-delay:1.2s}
+@keyframes tuRing2{0%{transform:scale(1);opacity:.6}100%{transform:scale(1.9);opacity:0}}
+.tu-chips{position:absolute;bottom:0;display:flex;gap:6px}
+.tu-chip{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:800;background:#fff;border:1px solid #e2e8f0;color:#0f172a;border-radius:99px;padding:.3rem .6rem;box-shadow:0 4px 10px -4px #0003;animation:up .5s both}
+.tu-chip svg{width:12px;height:12px;color:#059669}.dark .tu-chip{background:#111c2e;border-color:#2b3a52;color:#f1f5f9}
+`;
+const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+const NOTA = `<div class="tu-note"><i data-lucide="info"></i><p><b>PAGOYA no es una billetera virtual.</b> No guarda ni mueve tu dinero: es una modalidad que facilita cómo recibes y envías dinero por Pago Móvil. El pago siempre sale de tu banco.</p></div>`;
+const ico = (n, c='') => `<i data-lucide="${n}" class="${c}"></i>`;
+const SLIDES = [
+ { art:`<div class="tu-ring"></div><div class="tu-ring r2"></div><div class="tu-logo">P$</div><span class="tu-dot" style="width:12px;height:12px;background:#facc15;top:14px;left:22%"></span><span class="tu-dot" style="width:9px;height:9px;background:#2563eb;top:40px;right:20%;animation-delay:.6s"></span><span class="tu-dot" style="width:10px;height:10px;background:#ef4444;bottom:16px;left:30%;animation-delay:1.1s"></span>`,
+   t:'¡Bienvenido a PAGOYA!', d:'Cobra y paga con Pago Móvil sin escribir datos bancarios a mano. En 1 minuto te mostramos cómo funciona.' },
+ { art:`<div style="display:flex;flex-direction:column;align-items:center;width:100%"><div class="tu-nw">${ico('wallet')}<u>Billetera virtual</u></div><div class="tu-flow"><div class="tu-node">${ico('landmark')}Tu banco</div><div class="tu-line"><span class="tu-coin">Bs</span></div><div class="tu-node">${ico('landmark')}Su banco</div></div></div>`,
+   t:'No es una billetera', d:'Tu dinero nunca pasa por PAGOYA: siempre está en tu banco. Somos una modalidad que hace más fácil recibir y enviar dinero.', note:1 },
+ { art:`<div class="tu-card">${ico('qr-code','q')}</div><div class="tu-ok">${ico('check')}</div>`,
+   t:'Cobra con tu QR', d:'Muestra tu QR personal. Quien lo escanee ve tus datos de Pago Móvil listos, sin escribir nada.' },
+ { art:`<div class="tu-steps"><div class="tu-st" style="animation-delay:.1s"><span>${ico('scan')}</span>Escanea</div><div class="tu-cn" style="animation-delay:.5s"></div><div class="tu-st" style="animation-delay:.7s"><span>${ico('copy')}</span>Copia</div><div class="tu-cn" style="animation-delay:1.1s"></div><div class="tu-st" style="animation-delay:1.3s"><span>${ico('landmark')}</span>Paga en tu banco</div></div>`,
+   t:'Paga en 3 pasos', d:'Escanea el QR, PAGOYA copia los datos y te abre tu banco. Tú confirmas el pago allí, como siempre.' },
+ { art:`<div class="tu-shield">${ico('shield-check')}</div><div class="tu-chips"><span class="tu-chip" style="animation-delay:.5s">${ico('check')}PIN</span><span class="tu-chip" style="animation-delay:.65s">${ico('check')}Código SMS</span><span class="tu-chip" style="animation-delay:.8s">${ico('check')}Huella</span></div>`,
+   t:'Protegido y a tu control', d:'Entras con tu PIN, verificas por SMS y puedes activar tu huella en Ajustes. Todo listo para empezar.' }
+];
+let idx = 0, pri = false;
+const el = document.createElement('div'); el.id = 'tuto';
+el.innerHTML = `<div class="tu-top"><div class="tu-bars" id="tu-bars">${SLIDES.map(()=>'<i></i>').join('')}</div><button class="tu-skip" onclick="cerrarTuto()">Saltar</button></div><div id="tu-body"></div><div class="tu-foot"><button id="tu-prev" class="btn btn-light !w-14 shrink-0" onclick="tuGo(-1)" aria-label="Anterior"><i data-lucide="arrow-left" class="w-4 h-4"></i></button><button id="tu-next" class="btn btn-yellow" onclick="tuGo(1)"></button></div>`;
+document.querySelector('.phone-frame').appendChild(el);
+
+function pintarTuto(){
+  const s = SLIDES[idx], u = idx === SLIDES.length - 1;
+  document.getElementById('tu-body').innerHTML = `<div class="tu-art">${s.art}</div><h3>${s.t}</h3><p class="tu-tx">${s.d}</p>${s.note ? '<div style="margin-top:12px">' + NOTA + '</div>' : ''}`;
+  [...document.getElementById('tu-bars').children].forEach((b, i) => b.className = i < idx ? 'done' : i === idx ? 'on' : '');
+  document.getElementById('tu-prev').style.display = idx ? 'flex' : 'none';
+  document.getElementById('tu-next').innerHTML = u ? `${ico('rocket','w-4 h-4')} ${pri ? 'Ver mi QR' : 'Entendido'}` : `Siguiente ${ico('arrow-right','w-4 h-4')}`;
+  document.querySelector('.tu-skip').style.visibility = u ? 'hidden' : 'visible';
+  ic();
+}
+window.abrirTuto = function(primera){ idx = 0; pri = !!primera; el.classList.add('open'); pintarTuto(); };
+window.cerrarTuto = function(){
+  el.classList.remove('open');
+  if (user) store.set('pagoya_tuto_' + keyDe(user), true);
+  if (pri) toast('¡Listo! Este es tu QR para cobrar', 'ok');
+};
+window.tuGo = function(d){
+  const n = idx + d;
+  if (n >= SLIDES.length) return cerrarTuto();
+  if (n < 0) return;
+  idx = n; pintarTuto();
+};
+let x0 = null;
+el.addEventListener('pointerdown', e => { x0 = e.clientX; });
+el.addEventListener('pointerup', e => { if (x0 === null) return; const dx = e.clientX - x0; x0 = null; if (Math.abs(dx) > 50 && !e.target.closest('button')) tuGo(dx < 0 ? 1 : -1); });
+
+/* Lanzar el tutorial a quien acaba de registrarse */
+const _reg = registrar;
+registrar = function(){ const antes = user; _reg(); if (user && user !== antes && session) setTimeout(() => abrirTuto(true), 400); };
+
+/* Avisos “no es una billetera” + accesos al tutorial */
+const q = (s) => document.querySelector(s);
+q('#screen-1 > div:last-child').insertAdjacentHTML('afterbegin', `<button onclick="abrirTuto(false)" class="btn btn-light"><i data-lucide="play-circle" class="w-4 h-4 text-blue-600"></i> ¿Cómo funciona PAGOYA?</button>`);
+q('#screen-8 .space-y-3').insertAdjacentHTML('beforeend', `<div class="rise card p-3.5" style="--i:5"><p class="lbl flex items-center gap-1.5"><i data-lucide="info" class="w-3.5 h-3.5"></i> Acerca de PAGOYA</p><p class="text-[11px] text-slate-600 leading-snug mt-1">PAGOYA <b>no es una billetera virtual</b>. Es una modalidad para facilitar la manera de recibir y enviar dinero por Pago Móvil.</p><button onclick="abrirTuto(false)" class="btn btn-light mt-2.5"><i data-lucide="play-circle" class="w-4 h-4 text-blue-600"></i> Ver el tutorial otra vez</button></div>`);
+q('header .flex-wrap').insertAdjacentHTML('beforeend', `<button onclick="abrirTuto(true)" class="nav-btn">★ Tutorial</button>`);
+const v = document.querySelector('header h1'); if (v) v.innerHTML = v.innerHTML.replace('v2.9', 'v3.0');
+ic();
+})();
+
+</script>
+<script>
+/* Puente con Flutter (si no existe, la app sigue funcionando en el navegador) */
+(function(){
+  const tema=()=>{try{Tema.postMessage(document.body.classList.contains('dark')?'dark':'light')}catch(e){}};
+  new MutationObserver(tema).observe(document.body,{attributes:true,attributeFilter:['class']});
+  window.addEventListener('load',tema);
+  const orig=descargarQR;
+  descargarQR=function(){
+    if(!window.Descarga) return orig();
+    try{
+      const cv=document.createElement('canvas'); dibujarQR(cv,textoQR(),800);
+      Descarga.postMessage(JSON.stringify({n:`PAGOYA-QR-${primerNombre(sinAcentos(user.nombre))}.png`,d:cv.toDataURL('image/png')}));
+      toast('QR listo para guardar o compartir','ok');
+    }catch(e){toast('No se pudo descargar el QR','error')}
+  };
+})();
+</script>
+</body>
+</html>
